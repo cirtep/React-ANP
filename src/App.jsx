@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import DashboardLayout from "./layouts/DashboardLayout";
 import MobileResponsiveDashboard from "./layouts/MobileResponsiveDashboard";
@@ -9,34 +9,43 @@ import ForecastPage from "./pages/ForecastPage";
 import GoalsPage from "./pages/GoalsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import LoginPage from "./pages/LoginPage";
-import useMediaQuery from "./hooks/useMediaQuery";
-import { useAuth } from "./contexts/AuthContext";
-import LoadingSpinner from "./components/LoadingSpinner";
+import useAuth from "./hooks/useAuth";
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const location = useLocation();
-  const { isAuthenticated, loading } = useAuth();
-
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
+  const { isAuthenticated } = useAuth();
   if (!isAuthenticated()) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
-
   return children;
 };
 
-const App = () => {
-  const useMobileLayout = useMediaQuery("(max-width: 768px)");
-  const Layout = useMobileLayout ? MobileResponsiveDashboard : DashboardLayout;
-  const { loading } = useAuth();
+const useResponsiveLayout = () => {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  useEffect(() => {
+    // Handler to call on window resize
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Add event listener
+    window.addEventListener("resize", handleResize);
+
+    // Call handler right away so state gets updated with initial window size
+    handleResize();
+
+    // Remove event listener on cleanup
+    return () => window.removeEventListener("resize", handleResize);
+  }, []); // Empty array ensures effect runs only on mount and unmount
+
+  return isMobile;
+};
+
+const App = () => {
+  const isMobileLayout = useResponsiveLayout();
+  const Layout = isMobileLayout ? MobileResponsiveDashboard : DashboardLayout;
 
   return (
     <Routes>

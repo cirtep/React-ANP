@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import LoadingSpinner from "../components/LoadingSpinner";
+import useAuth from "../hooks/useAuth";
 
 const LoginPage = () => {
   const [username, setUsername] = useState("");
@@ -30,15 +29,14 @@ const LoginPage = () => {
 
     try {
       const result = await login(username, password);
-
       if (result.success) {
         navigate(from, { replace: true });
       } else {
         setError(result.error);
-        setIsLoading(false);
       }
     } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
+      setError("Authentication service error. Please try again. " + err);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -46,10 +44,6 @@ const LoginPage = () => {
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
-
-  if (isLoading) {
-    return <LoadingSpinner />;
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-white to-blue-50 p-4">
@@ -86,7 +80,7 @@ const LoginPage = () => {
 
             {/* Error message */}
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md">
+              <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md animate-fadeIn">
                 <div className="flex">
                   <div className="flex-shrink-0">
                     <svg
@@ -103,7 +97,12 @@ const LoginPage = () => {
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm">{error}</p>
+                    <p className="text-sm font-medium">{error}</p>
+                    {error === "Invalid username or password" && (
+                      <p className="text-xs mt-1">
+                        Please check your credentials and try again.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

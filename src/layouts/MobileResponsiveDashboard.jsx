@@ -22,17 +22,17 @@ const MobileResponsiveDashboard = ({ children, title }) => {
 
       {/* Mobile sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 flex flex-col z-30 max-w-xs w-full bg-[#1e2233] transform transition-transform lg:translate-x-0 lg:static lg:z-auto ${
+        className={`fixed inset-y-0 left-0 flex flex-col z-30 w-64 bg-[#1e2233] transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:z-auto ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="absolute top-0 right-0 -mr-12 pt-2 lg:hidden">
+        {/* Close button - moved and repositioned */}
+        <div className="absolute top-3 right-3 lg:hidden">
           <button
-            className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+            className="flex items-center justify-center h-8 w-8 rounded-full focus:outline-none focus:ring-2 focus:ring-white bg-gray-700"
             onClick={() => setSidebarOpen(false)}
           >
-            <span className="sr-only">Close sidebar</span>
-            <X className="h-6 w-6 text-white" />
+            <X className="h-5 w-5 text-white" />
           </button>
         </div>
         <EnhancedSidebar />

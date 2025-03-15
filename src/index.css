@@ -1,1 +1,29 @@
 @import "tailwindcss";
+
+.scrollbar-container {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+
+.scrollbar-container::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scrollbar-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-container::-webkit-scrollbar-thumb {
+  background-color: rgba(156, 163, 175, 0.3);
+  border-radius: 20px;
+  border: transparent;
+}
+
+.scrollbar-container::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(156, 163, 175, 0.5);
+}
+
+.scrollbar-container nav {
+  padding-right: 6px;
+  width: 100%;
+}

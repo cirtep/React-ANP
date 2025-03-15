@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { ChevronDown, Settings, LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ChevronDown, Settings, LogOut, Menu } from "lucide-react";
+import useAuth from "../hooks/useAuth";
 
-const Header = ({ title = "Title" }) => {
-  const navigate = useNavigate();
+const Header = ({ title = "Title", children }) => {
+  const { logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -12,12 +13,7 @@ const Header = ({ title = "Title" }) => {
   };
 
   const handleLogout = () => {
-    // Clear authentication data
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-
-    // Redirect to login page
-    navigate("/login");
+    logout();
   };
 
   // Close dropdown when clicking outside
@@ -35,8 +31,11 @@ const Header = ({ title = "Title" }) => {
   }, []);
 
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-10 shadow-sm">
-      <h2 className="text-xl font-medium text-gray-800">{title}</h2>
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-10 shadow-sm">
+      <div className="flex items-center">
+        {children}
+        <h2 className="text-xl font-medium text-gray-800 ml-2">{title}</h2>
+      </div>
 
       <div className="flex items-center space-x-2">
         <div className="relative" ref={dropdownRef}>
@@ -69,7 +68,7 @@ const Header = ({ title = "Title" }) => {
               <div className="border-t border-gray-200 my-1"></div>
               <button
                 onClick={handleLogout}
-                className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left"
+                className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-gray-100 w-full text-left cursor-pointer"
               >
                 <LogOut size={16} className="mr-2" />
                 Logout
