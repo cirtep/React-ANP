@@ -9,6 +9,7 @@ import ForecastPage from "./pages/ForecastPage";
 import GoalsPage from "./pages/GoalsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import LoginPage from "./pages/LoginPage";
+import SettingsOverlay from "./pages/SettingsOverlay";
 import useAuth from "./hooks/useAuth";
 
 // Protected Route component
@@ -100,6 +101,15 @@ const App = () => {
             <Layout title="Goals">
               <GoalsPage />
             </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            {/* Overlay penuh layar tanpa layout di belakangnya */}
+            <SettingsOverlay />
           </ProtectedRoute>
         }
       />

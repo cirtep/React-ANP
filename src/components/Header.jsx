@@ -60,6 +60,7 @@ const Header = ({ title = "Title", children }) => {
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10 border border-gray-200">
               <Link
                 to="/settings"
+                state={{ from: location.pathname }} // Kirim state from
                 className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
               >
                 <Settings size={16} className="mr-2" />

@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (username, password) => {
-    setLoading(true);
+    // setLoading(true);
 
     try {
       const response = await fetch(`${baseUrl}/api/auth/login`, {
@@ -61,10 +61,10 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("token", data.data.access_token);
       localStorage.setItem("user", JSON.stringify(data.data.user));
 
-      setLoading(false);
+      // setLoading(false);
       return { success: true };
     } catch (err) {
-      setLoading(false);
+      // setLoading(false);
       return {
         success: false,
         error: err.message || "An error occurred during login",

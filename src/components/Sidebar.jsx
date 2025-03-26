@@ -97,7 +97,7 @@ const Sidebar = () => {
                 <div>
                   <button
                     onClick={() => toggleSubmenu(item.id)}
-                    className={`flex items-center w-full rounded-md ${
+                    className={`flex items-center w-full rounded-md cursor-pointer ${
                       isCollapsed ? "justify-center py-3 px-2" : "px-3 py-2"
                     } ${
                       item.active ? "bg-blue-500" : "hover:bg-gray-700"
