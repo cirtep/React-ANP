@@ -114,19 +114,21 @@ const ForecastPage = () => {
                   type="monotone"
                   dataKey="yhat"
                   stroke="#3B82F6"
+                  name="Forecast"
                   strokeWidth={2}
                   dot={false}
                 />
-                <Line
+                {/* <Line
                   type="monotone"
                   dataKey="yhat_upper"
                   stroke="#10B981"
                   strokeDasharray="5 5"
                   dot={false}
-                />
+                /> */}
                 <Line
                   type="monotone"
                   dataKey="yhat_lower"
+                  name="Lower Bounce"
                   stroke="#EF4444"
                   strokeDasharray="5 5"
                   dot={false}
