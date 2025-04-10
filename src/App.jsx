@@ -5,6 +5,7 @@ import MobileResponsiveDashboard from "./layouts/MobileResponsiveDashboard";
 import HomePage from "./pages/HomePage";
 import CustomerPage from "./pages/CustomerPage";
 import InventoryPage from "./pages/InventoryPage";
+import CustomerDetailPage from "./pages/CustomerDetailPage"; // New import
 import ForecastPage from "./pages/ForecastPage";
 import GoalsPage from "./pages/GoalsPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -15,10 +16,18 @@ import useAuth from "./hooks/useAuth";
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
   const location = useLocation();
-  const { isAuthenticated } = useAuth();
-  if (!isAuthenticated()) {
+  const { isAuthenticated, isExpired, logout } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated() && isExpired()) {
+      logout();
+    }
+  }, [isAuthenticated, isExpired, logout]);
+
+  if (!isAuthenticated() || isExpired()) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+
   return children;
 };
 
@@ -70,6 +79,16 @@ const App = () => {
           <ProtectedRoute>
             <Layout title="Customer">
               <CustomerPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/customer/:customerId"
+        element={
+          <ProtectedRoute>
+            <Layout title="Customer Detail">
+              <CustomerDetailPage />
             </Layout>
           </ProtectedRoute>
         }

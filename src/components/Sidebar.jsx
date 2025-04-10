@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   ChevronLeft,
@@ -11,9 +11,17 @@ import {
 } from "lucide-react";
 
 const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [expandedSubmenu, setExpandedSubmenu] = useState("");
   const location = useLocation();
+  const [isCollapsed, setIsCollapsed] = useState(
+    location.pathname.startsWith("/customer/")
+  );
+  const [expandedSubmenu, setExpandedSubmenu] = useState("");
+
+  useEffect(() => {
+    if (location.pathname.startsWith("/customer/")) {
+      setIsCollapsed(true);
+    }
+  }, [location.pathname]);
 
   const menuItems = [
     {
@@ -28,14 +36,18 @@ const Sidebar = () => {
       label: "Customer",
       icon: <Users size={16} />,
       path: "/customer",
-      active: location.pathname === "/customer",
+      active:
+        location.pathname === "/customer" ||
+        location.pathname.startsWith("/customer/"),
     },
     {
       id: "inventory",
       label: "Inventory",
       icon: <Package size={16} />,
       path: "/inventory",
-      active: location.pathname === "/inventory",
+      active:
+        location.pathname === "/inventory" ||
+        location.pathname.startsWith("/inventory/"),
     },
     {
       id: "forecast",

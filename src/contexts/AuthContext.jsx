@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { jwtDecode } from "jwt-decode";
 
 const AuthContext = createContext(null);
 const baseUrl = import.meta.env.VITE_BASE_URL;
@@ -84,12 +85,32 @@ export const AuthProvider = ({ children }) => {
     return !!token;
   };
 
+  const isExpired = () => {
+    if (!token) return true;
+
+    try {
+      const decodedToken = jwtDecode(token);
+      const currentTime = Math.floor(Date.now() / 1000);
+
+      if (!decodedToken.exp || typeof decodedToken.exp !== "number") {
+        console.error("Token tidak memiliki properti 'exp' yang valid.");
+        return true;
+      }
+
+      return decodedToken.exp < currentTime;
+    } catch (error) {
+      console.error("Terjadi kesalahan saat mendekode token:", error);
+      return true;
+    }
+  };
+
   const value = {
     currentUser,
     token,
     login,
     logout,
     isAuthenticated,
+    isExpired,
     loading,
     setLoading,
   };
