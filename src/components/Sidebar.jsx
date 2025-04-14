@@ -13,12 +13,16 @@ import {
 const Sidebar = () => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(
-    location.pathname.startsWith("/customer/")
+    location.pathname.startsWith("/customer/") ||
+      location.pathname.startsWith("/inventory/")
   );
   const [expandedSubmenu, setExpandedSubmenu] = useState("");
 
   useEffect(() => {
-    if (location.pathname.startsWith("/customer/")) {
+    if (
+      location.pathname.startsWith("/customer/") ||
+      location.pathname.startsWith("/inventory/")
+    ) {
       setIsCollapsed(true);
     }
   }, [location.pathname]);

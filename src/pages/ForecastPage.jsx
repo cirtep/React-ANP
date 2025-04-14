@@ -21,7 +21,7 @@ const ForecastPage = () => {
     const fetchForecastData = async () => {
       try {
         const response = await fetch(
-          `${baseUrl}/api/sales_forecast?aggregation=${aggregationType}`,
+          `${baseUrl}/api/forecast/sales_forecast?aggregation=${aggregationType}`,
           {
             method: "GET",
             headers: {

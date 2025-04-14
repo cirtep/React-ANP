@@ -5,7 +5,8 @@ import MobileResponsiveDashboard from "./layouts/MobileResponsiveDashboard";
 import HomePage from "./pages/HomePage";
 import CustomerPage from "./pages/CustomerPage";
 import InventoryPage from "./pages/InventoryPage";
-import CustomerDetailPage from "./pages/CustomerDetailPage"; // New import
+import CustomerDetailPage from "./pages/CustomerDetailPage";
+import InventoryDetailPage from "./pages/InventoryDetailPage";
 import ForecastPage from "./pages/ForecastPage";
 import GoalsPage from "./pages/GoalsPage";
 import NotFoundPage from "./pages/NotFoundPage";
@@ -99,6 +100,16 @@ const App = () => {
           <ProtectedRoute>
             <Layout title="Inventory">
               <InventoryPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/inventory/:productId"
+        element={
+          <ProtectedRoute>
+            <Layout title="Inventory Details">
+              <InventoryDetailPage />
             </Layout>
           </ProtectedRoute>
         }
