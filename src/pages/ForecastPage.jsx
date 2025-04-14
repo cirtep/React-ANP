@@ -26,66 +26,27 @@ import {
 } from "lucide-react";
 
 const ForecastPage = () => {
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+
   const [savedForecasts, setSavedForecasts] = useState([]);
   // const [loadingSaved, setLoadingSaved] = useState(false);
   // const [savedError, setSavedError] = useState(null);
 
-  // Add this function to fetch saved forecasts
-  const fetchSavedForecasts = async () => {
-    if (!selectedProduct) return;
-
-    // setLoadingSaved(true);
-    // setSavedError(null);
-
-    try {
-      const response = await fetch(
-        `${baseUrl}/api/forecast/saved/${selectedProduct.product_id}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch saved forecasts");
-      }
-
-      const result = await response.json();
-      setSavedForecasts(result.data || []);
-      // setLoadingSaved(false);
-    } catch (error) {
-      console.error("Error fetching saved forecasts:", error);
-      // setSavedError(error.message);
-      // setLoadingSaved(false);
-    }
-  };
-
-  // State for product selection and search
   const [productQuery, setProductQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showProductSearch, setShowProductSearch] = useState(false);
 
-  // State for forecast data
   const [forecastData, setForecastData] = useState([]);
   // const [historicalData, setHistoricalData] = useState([]);
   const [combinedData, setCombinedData] = useState([]);
   const [activeTab, setActiveTab] = useState("summary");
   const [forecastPeriod, setForecastPeriod] = useState(6); // Default 6 months
-
-  // State for loading and errors
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // State for product analysis
   const [productAnalysis, setProductAnalysis] = useState(null);
 
-  // Ref for search dropdown
   const searchRef = useRef(null);
-
-  // Get base URL from environment
   const baseUrl = import.meta.env.VITE_BASE_URL;
 
   // Close search dropdown when clicking outside
@@ -124,7 +85,6 @@ const ForecastPage = () => {
         );
 
         if (!response.ok) throw new Error("Failed to search products");
-
         const result = await response.json();
         setSearchResults(result.data || []);
       } catch (error) {
@@ -139,7 +99,39 @@ const ForecastPage = () => {
     return () => clearTimeout(debounce);
   }, [productQuery, baseUrl]);
 
-  // Fetch forecast data when a product is selected or forecast period changes
+  // Function to fetch saved forecasts
+  const fetchSavedForecasts = async () => {
+    if (!selectedProduct) return;
+
+    // setLoadingSaved(true);
+    // setSavedError(null);
+
+    try {
+      const response = await fetch(
+        `${baseUrl}/api/forecast/saved/${selectedProduct.product_id}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch saved forecasts");
+      }
+
+      const result = await response.json();
+      setSavedForecasts(result.data || []);
+      // setLoadingSaved(false);
+    } catch (error) {
+      console.error("Error fetching saved forecasts:", error);
+      // setSavedError(error.message);
+      // setLoadingSaved(false);
+    }
+  };
+
+  // useEffect to fetch forecast, historical, and saved forecast data when selectedProduct changes
   useEffect(() => {
     if (!selectedProduct) return;
 
@@ -162,7 +154,6 @@ const ForecastPage = () => {
         if (!forecastResponse.ok) {
           throw new Error("Failed to fetch forecast data");
         }
-
         const forecastResult = await forecastResponse.json();
 
         // Fetch historical data - last 24 months
@@ -179,7 +170,6 @@ const ForecastPage = () => {
         if (!historicalResponse.ok) {
           throw new Error("Failed to fetch historical data");
         }
-
         const historicalResult = await historicalResponse.json();
 
         // Also fetch saved forecasts
@@ -196,6 +186,7 @@ const ForecastPage = () => {
         }));
 
         const formattedForecast = forecastResult.data.map((item) => ({
+          ds: item.ds,
           date: new Date(item.ds).toLocaleDateString("en-US", {
             month: "short",
             year: "numeric",
@@ -206,10 +197,9 @@ const ForecastPage = () => {
           type: item.is_historical ? "historical" : "forecast",
         }));
 
-        // Combine the data
+        // Combine the data by merging historical and forecast entries
         const combined = [...formattedHistorical];
 
-        // Add forecast data, merging with historical where dates overlap
         formattedForecast.forEach((forecastItem) => {
           const existingIndex = combined.findIndex(
             (item) => item.date === forecastItem.date
@@ -225,7 +215,6 @@ const ForecastPage = () => {
               type: "both", // Mark as both historical and forecast
             };
           } else {
-            // If it's a new date, add the forecast entry
             combined.push(forecastItem);
           }
         });
@@ -237,7 +226,7 @@ const ForecastPage = () => {
           return dateA - dateB;
         });
 
-        // Fetch product analysis
+        // Optionally, fetch product analysis (if available)
         const analysisResponse = await fetch(
           `${baseUrl}/api/inventory/product_analysis?product_id=${selectedProduct.product_id}`,
           {
@@ -247,13 +236,12 @@ const ForecastPage = () => {
             },
           }
         );
-
         if (analysisResponse.ok) {
           const analysisResult = await analysisResponse.json();
           setProductAnalysis(analysisResult.data);
         }
 
-        // Update state
+        // Update state with fetched and formatted data
         // setHistoricalData(formattedHistorical);
         setForecastData(formattedForecast);
         setCombinedData(combined);
@@ -302,13 +290,11 @@ const ForecastPage = () => {
       }
 
       const result = await response.json();
-
-      // Show success message
       alert(
         `Forecast saved successfully: ${result.data.saved} new entries, ${result.data.updated} updates`
       );
 
-      // Refresh saved forecasts
+      // Refresh saved forecasts after saving
       fetchSavedForecasts();
     } catch (error) {
       console.error("Error saving forecast:", error);
@@ -316,37 +302,167 @@ const ForecastPage = () => {
     }
   };
 
-  // Handle exporting forecast data
-  const exportForecast = () => {
-    if (!combinedData.length) return;
+  const exportForecast = (exportType = "all") => {
+    if (!combinedData.length && !savedForecasts.length) return;
 
-    // Convert data to CSV format
-    const headers = "Month,Actual,Forecast,Lower Bound,Upper Bound\n";
-    const rows = combinedData
-      .map(
-        (item) =>
-          `${item.date},${item.actual || ""},${item.forecast || ""},${
-            item.lower || ""
-          },${item.upper || ""}`
-      )
-      .join("\n");
+    let exportData = [];
+    let headers = "";
+    let filename = "";
 
+    // Create different export formats based on the type
+    switch (exportType) {
+      case "current": // Export only current forecast data
+      {
+        exportData = [...combinedData];
+        headers = "Month,Actual,Forecast,Lower Bound,Upper Bound\n";
+        filename = `${
+          selectedProduct?.product_name || "product"
+        }_current_forecast`;
+
+        // Generate rows for current forecast
+        const currentRows = exportData
+          .map(
+            (item) =>
+              `${item.date},${item.actual || ""},${item.forecast || ""},${
+                item.lower || ""
+              },${item.upper || ""}`
+          )
+          .join("\n");
+
+        generateCSV(headers, currentRows, filename);
+        break;
+      }
+
+      case "saved": // Export only saved forecasts
+      {
+        if (!savedForecasts.length) return;
+
+        // Format saved forecasts
+        savedForecasts.forEach((sf) => {
+          const sfDate = new Date(sf.ds);
+          exportData.push({
+            date: sfDate.toLocaleDateString("en-US", {
+              month: "short",
+              year: "numeric",
+            }),
+            forecast: Math.round(sf.yhat),
+            lower: Math.round(sf.yhat_lower),
+            upper: Math.round(sf.yhat_upper),
+            savedAt: sf.saved_at,
+          });
+        });
+
+        // Sort by date
+        exportData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        headers = "Month,Forecast,Lower Bound,Upper Bound,Saved On\n";
+        filename = `${
+          selectedProduct?.product_name || "product"
+        }_saved_forecasts`;
+
+        // Generate rows for saved forecasts
+        const savedRows = exportData
+          .map(
+            (item) =>
+              `${item.date},${item.forecast || ""},${item.lower || ""},${
+                item.upper || ""
+              },${item.savedAt || ""}`
+          )
+          .join("\n");
+
+        generateCSV(headers, savedRows, filename);
+        break;
+      }
+
+      case "all":
+      default: // Create a complete dataset that combines current and saved forecasts
+      {
+        exportData = [...combinedData];
+
+        // Add saved forecasts data
+        savedForecasts.forEach((savedForecast) => {
+          // Convert saved forecast date to the format used in combinedData
+          const sfDate = new Date(savedForecast.ds);
+          const formattedDate = sfDate.toLocaleDateString("en-US", {
+            month: "short",
+            year: "numeric",
+          });
+
+          // Check if this saved forecast already exists in the export data
+          const existingIndex = exportData.findIndex(
+            (item) => item.date === formattedDate
+          );
+
+          if (existingIndex >= 0) {
+            // Update existing entry with saved forecast data
+            exportData[existingIndex] = {
+              ...exportData[existingIndex],
+              savedForecast: Math.round(savedForecast.yhat),
+              savedLower: Math.round(savedForecast.yhat_lower),
+              savedUpper: Math.round(savedForecast.yhat_upper),
+              hasSavedForecast: true,
+              savedAt: savedForecast.saved_at,
+            };
+          } else {
+            // Add new entry for saved forecast
+            exportData.push({
+              date: formattedDate,
+              savedForecast: Math.round(savedForecast.yhat),
+              savedLower: Math.round(savedForecast.yhat_lower),
+              savedUpper: Math.round(savedForecast.yhat_upper),
+              hasSavedForecast: true,
+              savedAt: savedForecast.saved_at,
+            });
+          }
+        });
+
+        // Sort by date
+        exportData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        headers =
+          "Month,Actual,Current Forecast,Current Lower Bound,Current Upper Bound,Saved Forecast,Saved Lower Bound,Saved Upper Bound,Saved On\n";
+        filename = `${
+          selectedProduct?.product_name || "product"
+        }_all_forecasts`;
+
+        // Generate rows for all data
+        const allRows = exportData
+          .map((item) => {
+            return `${item.date},${item.actual || ""},${item.forecast || ""},${
+              item.lower || ""
+            },${item.upper || ""},${
+              item.hasSavedForecast ? item.savedForecast : ""
+            },${item.hasSavedForecast ? item.savedLower : ""},${
+              item.hasSavedForecast ? item.savedUpper : ""
+            },${item.hasSavedForecast ? item.savedAt : ""}`;
+          })
+          .join("\n");
+
+        generateCSV(headers, allRows, filename);
+        break;
+      }
+    }
+  };
+
+  // Helper function to generate and download CSV
+  const generateCSV = (headers, rows, baseFilename) => {
     const csvContent = "data:text/csv;charset=utf-8," + headers + rows;
     const encodedUri = encodeURI(csvContent);
 
     // Create link and trigger download
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute(
-      "download",
-      `${selectedProduct?.product_name || "product"}_forecast.csv`
-    );
+
+    // Add date to filename
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+    link.setAttribute("download", `${baseFilename}_${today}.csv`);
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Get current month for reference line
+  // Get current month for the ReferenceLine in the chart
   const getCurrentMonthFormatted = () => {
     return new Date().toLocaleDateString("en-US", {
       month: "short",
@@ -354,7 +470,7 @@ const ForecastPage = () => {
     });
   };
 
-  // Get statistical summary
+  // Calculate simple forecast statistics
   const getStatistics = () => {
     if (!forecastData.length) return null;
 
@@ -372,13 +488,12 @@ const ForecastPage = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      {/* Header with Product Search */}
+      {/* Header and Product Search */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800 flex items-center mb-4 md:mb-0">
           <TrendingUp className="mr-2 text-blue-600" />
           Sales Forecast
         </h1>
-
         <div className="w-full md:w-auto flex flex-col md:flex-row gap-3">
           <div className="relative" ref={searchRef}>
             <div className="relative">
@@ -398,7 +513,6 @@ const ForecastPage = () => {
                 size={18}
               />
             </div>
-
             {showProductSearch && (
               <div className="absolute z-10 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto">
                 {searchResults.length > 0 ? (
@@ -427,7 +541,6 @@ const ForecastPage = () => {
               </div>
             )}
           </div>
-
           {selectedProduct && (
             <>
               <div className="flex">
@@ -452,7 +565,6 @@ const ForecastPage = () => {
                   6 Months
                 </button>
               </div>
-
               <button
                 onClick={saveForecast}
                 className="px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center"
@@ -460,20 +572,61 @@ const ForecastPage = () => {
               >
                 <Save size={18} className="mr-1" /> Save
               </button>
+              {/* Replace your existing export button with this enhanced version */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportDropdown(!showExportDropdown)}
+                  className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
+                  disabled={
+                    loading || (!forecastData.length && !savedForecasts.length)
+                  }
+                >
+                  <Download size={18} className="mr-1" /> Export
+                  <ChevronDown size={14} className="ml-1" />
+                </button>
 
-              <button
-                onClick={exportForecast}
-                className="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center"
-                disabled={loading || !forecastData.length}
-              >
-                <Download size={18} className="mr-1" /> Export
-              </button>
+                {showExportDropdown && (
+                  <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                    <div className="rounded-md py-1">
+                      <button
+                        onClick={() => {
+                          exportForecast("all");
+                          setShowExportDropdown(false);
+                        }}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                      >
+                        All Forecasts
+                      </button>
+                      <button
+                        onClick={() => {
+                          exportForecast("current");
+                          setShowExportDropdown(false);
+                        }}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                        disabled={!forecastData.length}
+                      >
+                        Current Forecast Only
+                      </button>
+                      <button
+                        onClick={() => {
+                          exportForecast("saved");
+                          setShowExportDropdown(false);
+                        }}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left"
+                        disabled={!savedForecasts.length}
+                      >
+                        Saved Forecasts Only
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
       </div>
 
-      {/* Selected Product Info */}
+      {/* Product Info */}
       {selectedProduct && (
         <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
           <div className="flex justify-between items-start">
@@ -498,7 +651,6 @@ const ForecastPage = () => {
         </div>
       )}
 
-      {/* Show instruction if no product selected */}
       {!selectedProduct && !loading && !error && (
         <div className="flex flex-col items-center justify-center bg-gray-50 p-8 rounded-lg border border-gray-200 h-96">
           <Search size={48} className="text-gray-300 mb-4" />
@@ -512,14 +664,12 @@ const ForecastPage = () => {
         </div>
       )}
 
-      {/* Loading state */}
       {loading && (
         <div className="h-96 flex items-center justify-center">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
         </div>
       )}
 
-      {/* Error state */}
       {error && (
         <div className="bg-red-50 p-4 rounded-lg border border-red-200 mb-6 flex items-center">
           <AlertCircle className="text-red-500 mr-3" size={24} />
@@ -532,10 +682,9 @@ const ForecastPage = () => {
         </div>
       )}
 
-      {/* Chart and Tabs Section */}
+      {/* Chart and Summary Table */}
       {selectedProduct && !loading && !error && combinedData.length > 0 && (
         <>
-          {/* Chart */}
           <div className="mt-6 bg-gray-50 p-4 rounded-lg border border-gray-200 h-96">
             <div className="mb-2 flex justify-between items-center">
               <h3 className="font-medium text-gray-700">
@@ -556,7 +705,6 @@ const ForecastPage = () => {
                 </div>
               </div>
             </div>
-
             <ResponsiveContainer width="100%" height="90%">
               <LineChart data={combinedData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -571,7 +719,6 @@ const ForecastPage = () => {
                 <YAxis />
                 <Tooltip
                   formatter={(value, name) => {
-                    // Fix the name mapping to show the correct label on hover
                     const nameMap = {
                       actual: "Actual",
                       forecast: "Forecast",
@@ -582,8 +729,6 @@ const ForecastPage = () => {
                   }}
                 />
                 <Legend />
-
-                {/* Historical Line */}
                 <Line
                   type="monotone"
                   dataKey="actual"
@@ -593,8 +738,6 @@ const ForecastPage = () => {
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
                 />
-
-                {/* Forecast Line */}
                 <Line
                   type="monotone"
                   dataKey="forecast"
@@ -604,8 +747,6 @@ const ForecastPage = () => {
                   dot={{ r: 3 }}
                   activeDot={{ r: 5 }}
                 />
-
-                {/* Upper and Lower Bounds */}
                 <Line
                   type="monotone"
                   dataKey="upper"
@@ -622,8 +763,6 @@ const ForecastPage = () => {
                   strokeDasharray="5 5"
                   dot={false}
                 />
-
-                {/* Current Month Reference Line */}
                 <ReferenceLine
                   x={getCurrentMonthFormatted()}
                   stroke="#6B7280"
@@ -638,8 +777,6 @@ const ForecastPage = () => {
               </LineChart>
             </ResponsiveContainer>
           </div>
-
-          {/* Metrics Cards */}
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 flex items-center">
               <Calendar className="mr-3 text-blue-600" />
@@ -673,7 +810,7 @@ const ForecastPage = () => {
             </div>
           </div>
 
-          {/* Tabs Navigation */}
+          {/* Tab Navigation */}
           <div className="mt-8 border-b border-gray-200">
             <nav className="-mb-px flex">
               <button
@@ -760,26 +897,20 @@ const ForecastPage = () => {
                         Forecast
                       </td>
                       {combinedData.map((item, index) => {
-                        // Format date string from item.date to match saved forecast format
-                        const itemDate = new Date(
-                          item.date + " 1, 2000"
-                        ).toLocaleDateString("en-US", {
-                          month: "short",
-                          year: "numeric",
-                        });
+                        // Format date string to match saved forecast format (YYYY-MM-01)
+                        const dateParts = item.date.split(" ");
+                        const month =
+                          new Date(`${dateParts[0]} 1, 2000`).getMonth() + 1;
+                        const year = dateParts[1];
+                        const formattedMonth = month
+                          .toString()
+                          .padStart(2, "0");
+                        const formattedDate = `${year}-${formattedMonth}-01`;
 
-                        // Check if we have a saved forecast for this month
+                        // Find saved forecast for this month using exact date comparison
                         const savedForecast = savedForecasts.find((sf) => {
-                          const sfDate = new Date(sf.ds).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              year: "numeric",
-                            }
-                          );
-                          return (
-                            sfDate === itemDate && new Date(sf.ds) <= new Date()
-                          );
+                          const sfDate = sf.ds.substring(0, 10); // Get YYYY-MM-DD part
+                          return sfDate === formattedDate;
                         });
 
                         const valueToShow = savedForecast
@@ -802,11 +933,9 @@ const ForecastPage = () => {
                                 title={`Saved on ${savedForecast.saved_at}`}
                               >
                                 {valueToShow || "-"}
-                                {savedForecast && (
-                                  <span className="ml-1 text-xs text-green-600">
-                                    *
-                                  </span>
-                                )}
+                                <span className="ml-1 text-xs text-green-600">
+                                  *
+                                </span>
                               </span>
                             ) : (
                               valueToShow || "-"
@@ -822,25 +951,20 @@ const ForecastPage = () => {
                         Lower Bound
                       </td>
                       {combinedData.map((item, index) => {
-                        // Similar saved forecast check as above
-                        const itemDate = new Date(
-                          item.date + " 1, 2000"
-                        ).toLocaleDateString("en-US", {
-                          month: "short",
-                          year: "numeric",
-                        });
+                        // Format date string to match saved forecast format (YYYY-MM-01)
+                        const dateParts = item.date.split(" ");
+                        const month =
+                          new Date(`${dateParts[0]} 1, 2000`).getMonth() + 1;
+                        const year = dateParts[1];
+                        const formattedMonth = month
+                          .toString()
+                          .padStart(2, "0");
+                        const formattedDate = `${year}-${formattedMonth}-01`;
 
+                        // Find saved forecast for this month using exact date comparison
                         const savedForecast = savedForecasts.find((sf) => {
-                          const sfDate = new Date(sf.ds).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              year: "numeric",
-                            }
-                          );
-                          return (
-                            sfDate === itemDate && new Date(sf.ds) <= new Date()
-                          );
+                          const sfDate = sf.ds.substring(0, 10); // Get YYYY-MM-DD part
+                          return sfDate === formattedDate;
                         });
 
                         const valueToShow = savedForecast
@@ -870,25 +994,20 @@ const ForecastPage = () => {
                         Upper Bound
                       </td>
                       {combinedData.map((item, index) => {
-                        // Similar saved forecast check as above
-                        const itemDate = new Date(
-                          item.date + " 1, 2000"
-                        ).toLocaleDateString("en-US", {
-                          month: "short",
-                          year: "numeric",
-                        });
+                        // Format date string to match saved forecast format (YYYY-MM-01)
+                        const dateParts = item.date.split(" ");
+                        const month =
+                          new Date(`${dateParts[0]} 1, 2000`).getMonth() + 1;
+                        const year = dateParts[1];
+                        const formattedMonth = month
+                          .toString()
+                          .padStart(2, "0");
+                        const formattedDate = `${year}-${formattedMonth}-01`;
 
+                        // Find saved forecast for this month using exact date comparison
                         const savedForecast = savedForecasts.find((sf) => {
-                          const sfDate = new Date(sf.ds).toLocaleDateString(
-                            "en-US",
-                            {
-                              month: "short",
-                              year: "numeric",
-                            }
-                          );
-                          return (
-                            sfDate === itemDate && new Date(sf.ds) <= new Date()
-                          );
+                          const sfDate = sf.ds.substring(0, 10); // Get YYYY-MM-DD part
+                          return sfDate === formattedDate;
                         });
 
                         const valueToShow = savedForecast
@@ -924,19 +1043,15 @@ const ForecastPage = () => {
                 )}
               </div>
             )}
-
-            {/* Product Analysis Tab */}
             {activeTab === "analysis" && (
               <div>
                 {productAnalysis ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* General Information */}
                     <div className="bg-white p-5 rounded-lg border border-gray-200">
                       <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
                         <Info className="mr-2 text-blue-500" size={20} />
                         General Information
                       </h3>
-
                       <div className="space-y-3">
                         <div>
                           <span className="text-sm text-gray-500">
@@ -985,14 +1100,11 @@ const ForecastPage = () => {
                         </div>
                       </div>
                     </div>
-
-                    {/* Sales Performance - UPDATED */}
                     <div className="bg-white p-5 rounded-lg border border-gray-200">
                       <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
                         <BarChart2 className="mr-2 text-green-500" size={20} />
                         Sales Performance
                       </h3>
-
                       <div className="space-y-3">
                         <div>
                           <span className="text-sm text-gray-500">
@@ -1055,14 +1167,11 @@ const ForecastPage = () => {
                         </div>
                       </div>
                     </div>
-
-                    {/* Rate of Demand - UPDATED */}
                     <div className="bg-white p-5 rounded-lg border border-gray-200 md:col-span-2">
                       <h3 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
                         <PieChart className="mr-2 text-purple-500" size={20} />
                         Rate of Demand
                       </h3>
-
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div>
                           <span className="text-sm text-gray-500">
