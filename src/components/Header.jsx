@@ -4,7 +4,7 @@ import { ChevronDown, Settings, LogOut, Menu } from "lucide-react";
 import useAuth from "../hooks/useAuth";
 
 const Header = ({ title = "Title", children }) => {
-  const { logout } = useAuth();
+  const { logout, currentUser } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -43,10 +43,12 @@ const Header = ({ title = "Title", children }) => {
             className="flex items-center ml-4 cursor-pointer"
             onClick={toggleDropdown}
           >
-            <div className="w-8 h-8 rounded-full bg-orange-300 flex items-center justify-center text-white mr-2">
-              🍔
+            <div className="w-8 h-8 rounded-full bg-yellow-300 flex items-center justify-center text-white mr-2">
+              🤑
             </div>
-            <span className="hidden md:block">Delicious Burger</span>
+            <span className="hidden md:block">
+              {currentUser?.full_name || "Burger"}
+            </span>
             <ChevronDown
               size={16}
               className={`ml-1 transition-transform duration-200 ${
