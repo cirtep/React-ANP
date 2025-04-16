@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -11,6 +11,14 @@ import {
   User,
   ChevronRight,
   AlertCircle,
+  X,
+  CheckCircle,
+  Users,
+  MapPin,
+  Phone,
+  Mail,
+  FileText,
+  ChevronDown,
 } from "lucide-react";
 
 const CustomerPage = () => {
@@ -23,11 +31,39 @@ const CustomerPage = () => {
   const [selectedCustomers, setSelectedCustomers] = useState([]);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    customer_code: "",
+    customer_id: "",
+    business_name: "",
+    owner_name: "",
+    city: "",
+    phone: "",
+    address_1: "",
+    price_type: "Standard",
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [availableCities, setAvailableCities] = useState([]);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
 
+  const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // Pagination
-  const itemsPerPage = 10;
+  // Handle clicking outside the city dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowCityDropdown(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   // Fetch customers
   const fetchCustomers = async () => {
@@ -49,7 +85,25 @@ const CustomerPage = () => {
       }
 
       const data = await response.json();
-      setCustomers(data.data);
+
+      // Sort customers by purchase amount (descending)
+      const sortedCustomers = [...data.data].sort(
+        (a, b) => (b.total_purchases || 0) - (a.total_purchases || 0)
+      );
+
+      setCustomers(sortedCustomers);
+
+      // Extract unique cities for filter
+      const cities = [
+        ...new Set(
+          sortedCustomers
+            .map((customer) => customer.city)
+            .filter((city) => city && city.trim() !== "")
+        ),
+      ].sort();
+
+      setAvailableCities(cities);
+
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -64,18 +118,34 @@ const CustomerPage = () => {
 
   // Filtering and Search
   const filteredCustomers = useMemo(() => {
-    return customers.filter((customer) =>
-      Object.values(customer).some((value) =>
-        String(value).toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [customers, searchTerm]);
+    return customers.filter((customer) => {
+      // First filter by selected city if any
+      if (selectedCity && customer.city !== selectedCity) {
+        return false;
+      }
+
+      // Then filter by search term
+      if (searchTerm) {
+        return Object.values(customer).some((value) =>
+          String(value).toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+
+      return true;
+    });
+  }, [customers, searchTerm, selectedCity]);
 
   // Pagination
+  const itemsPerPage = 10;
   const paginatedCustomers = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredCustomers.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredCustomers, currentPage]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCity]);
 
   // Select/Deselect customer
   const handleSelectCustomer = (customerId) => {
@@ -148,6 +218,150 @@ const CustomerPage = () => {
     navigate(`/customer/${customerId}`);
   };
 
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+
+    // Clear error for this field if it exists
+    if (formErrors[name]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: null,
+      });
+    }
+  };
+
+  // Validate form
+  const validateForm = () => {
+    const errors = {};
+    if (!formData.customer_code.trim()) {
+      errors.customer_code = "Customer code is required";
+    }
+    if (!formData.customer_id.trim()) {
+      errors.customer_id = "Customer ID is required";
+    }
+    if (!formData.business_name.trim()) {
+      errors.business_name = "Business name is required";
+    }
+
+    return errors;
+  };
+
+  // Submit form to add customer
+  const handleAddCustomer = async (e) => {
+    e.preventDefault();
+
+    // Validate form
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/api/customer/create`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to add customer");
+      }
+
+      // Add new customer to list and close modal
+      await fetchCustomers(); // Refresh the customer list
+      setIsAddModalOpen(false);
+
+      // Reset form
+      setFormData({
+        customer_code: "",
+        customer_id: "",
+        business_name: "",
+        owner_name: "",
+        city: "",
+        phone: "",
+        address_1: "",
+        price_type: "Standard",
+      });
+      setFormErrors({});
+    } catch (err) {
+      setFormErrors({
+        general: err.message,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Export customers to CSV
+  const exportCustomers = () => {
+    // Create CSV header
+    const headers = [
+      "Customer ID",
+      "Business Name",
+      "Owner",
+      "City",
+      "Phone",
+      "Address",
+      "Price Type",
+    ];
+
+    // Map customers to CSV rows
+    const csvData = filteredCustomers.map((customer) => [
+      customer.customer_id || "",
+      customer.business_name || "",
+      customer.owner_name || "",
+      customer.city || "",
+      customer.phone || "",
+      customer.address_1 || "",
+      customer.price_type || "Standard",
+    ]);
+
+    // Add headers to the beginning
+    csvData.unshift(headers);
+
+    // Convert to CSV string
+    const csvString = csvData
+      .map((row) =>
+        row
+          .map((cell) => {
+            // Escape quotes and wrap cell in quotes if it contains commas or quotes
+            const escaped = String(cell).replace(/"/g, '""');
+            return `"${escaped}"`;
+          })
+          .join(",")
+      )
+      .join("\\n");
+
+    // Create download link
+    const link = document.createElement("a");
+    link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csvString);
+    link.download = `customers_export_${new Date()
+      .toISOString()
+      .slice(0, 10)}.csv`;
+
+    // Trigger download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Render loading state
   if (loading) {
     return (
@@ -190,27 +404,29 @@ const CustomerPage = () => {
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-blue-600 transition"
             title="Add New Customer"
+            onClick={() => setIsAddModalOpen(true)}
           >
             <PlusCircle className="mr-2" size={18} /> Add Customer
           </button>
           <button
             className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
-            title="Export Customers"
+            title="Refresh Customers"
             onClick={fetchCustomers}
           >
             <RefreshCw className="mr-2" size={18} /> Refresh
           </button>
           <button
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
-            title="Export Customers"
+            className="bg-green-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-green-600 transition"
+            title="Export Customers to CSV"
+            onClick={exportCustomers}
           >
-            <Download className="mr-2" size={18} /> Export
+            <Download className="mr-2" size={18} /> Export CSV
           </button>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="flex justify-between mb-5">
+      <div className="flex flex-wrap gap-4 mb-5">
         <div className="relative flex-grow mr-4">
           <input
             type="text"
@@ -221,12 +437,62 @@ const CustomerPage = () => {
           />
           <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
         </div>
-        <button
-          className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
-          title="Advanced Filters"
-        >
-          <Filter className="mr-2" size={18} /> Filters
-        </button>
+
+        {/* City filter dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
+            onClick={() => setShowCityDropdown(!showCityDropdown)}
+          >
+            <MapPin className="mr-2" size={18} />
+            {selectedCity || "Filter by City"}
+            <ChevronDown className="ml-2" size={16} />
+          </button>
+
+          {showCityDropdown && (
+            <div className="absolute z-10 right-0 mt-1 w-56 bg-white rounded-md shadow-lg py-1 max-h-64 overflow-y-auto">
+              <div className="px-3 py-2 border-b border-gray-200">
+                <input
+                  type="text"
+                  placeholder="Search cities..."
+                  className="w-full px-2 py-1 border rounded-md text-sm"
+                  onChange={(e) => {
+                    const searchValue = e.target.value.toLowerCase();
+                    // Filtering happens in the rendered list below
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              <button
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => {
+                  setSelectedCity("");
+                  setShowCityDropdown(false);
+                }}
+              >
+                All Cities
+              </button>
+
+              {availableCities.map((city) => (
+                <button
+                  key={city}
+                  className={`block w-full text-left px-4 py-2 text-sm ${
+                    selectedCity === city
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  onClick={() => {
+                    setSelectedCity(city);
+                    setShowCityDropdown(false);
+                  }}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -234,7 +500,7 @@ const CustomerPage = () => {
         <div className="bg-blue-50 rounded-md p-4 border border-blue-100">
           <div className="flex items-center">
             <div className="rounded-full bg-blue-100 p-2 mr-3">
-              <User size={18} className="text-blue-600" />
+              <Users size={18} className="text-blue-600" />
             </div>
             <div>
               <p className="text-sm text-gray-600">Total Customers</p>
@@ -242,28 +508,32 @@ const CustomerPage = () => {
             </div>
           </div>
         </div>
-        {/* <div className="bg-green-50 rounded-md p-4 border border-green-100">
+
+        <div className="bg-green-50 rounded-md p-4 border border-green-100">
           <div className="flex items-center">
             <div className="rounded-full bg-green-100 p-2 mr-3">
-              <User size={18} className="text-green-600" />
+              <MapPin size={18} className="text-green-600" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Cities</p>
+              <p className="text-xl font-semibold">{availableCities.length}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-purple-50 rounded-md p-4 border border-purple-100">
+          <div className="flex items-center">
+            <div className="rounded-full bg-purple-100 p-2 mr-3">
+              <FileText size={18} className="text-purple-600" />
             </div>
             <div>
               <p className="text-sm text-gray-600">Active Customers</p>
-              <p className="text-xl font-semibold">{customers.length}</p>
+              <p className="text-xl font-semibold">
+                {customers.filter((c) => c.total_purchases > 0).length}
+              </p>
             </div>
           </div>
-        </div> */}
-        {/* <div className="bg-purple-50 rounded-md p-4 border border-purple-100">
-          <div className="flex items-center">
-            <div className="rounded-full bg-purple-100 p-2 mr-3">
-              <User size={18} className="text-purple-600" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">New This Month</p>
-              <p className="text-xl font-semibold">0</p>
-            </div>
-          </div>
-        </div> */}
+        </div>
       </div>
 
       {/* Customer Table */}
@@ -285,7 +555,7 @@ const CustomerPage = () => {
                 />
               </th>
               <th className="p-3 text-left text-sm font-medium text-gray-500">
-                Customer Code
+                Customer ID
               </th>
               <th className="p-3 text-left text-sm font-medium text-gray-500">
                 Business Name
@@ -297,9 +567,12 @@ const CustomerPage = () => {
                 City
               </th>
               <th className="p-3 text-left text-sm font-medium text-gray-500">
-                Price Type
+                Phone
               </th>
               <th className="p-3 text-left text-sm font-medium text-gray-500">
+                Total Purchases
+              </th>
+              <th className="p-3 text-center text-sm font-medium text-gray-500">
                 Actions
               </th>
             </tr>
@@ -320,26 +593,23 @@ const CustomerPage = () => {
                       className="form-checkbox h-5 w-5 text-blue-500 rounded"
                     />
                   </td>
-                  <td className="p-3 font-medium">{customer.customer_code}</td>
+                  <td className="p-3 font-medium">{customer.customer_id}</td>
                   <td className="p-3">{customer.business_name}</td>
                   <td className="p-3">{customer.owner_name || "-"}</td>
                   <td className="p-3">{customer.city || "-"}</td>
-                  <td className="p-3">
-                    <span
-                      className={`
-                      px-2 py-1 rounded-full text-xs font-medium
-                      ${
-                        customer.price_type === "Retail"
-                          ? "bg-blue-100 text-blue-800"
-                          : "bg-green-100 text-green-800"
-                      }
-                    `}
-                    >
-                      {customer.price_type || "Standard"}
-                    </span>
+                  <td className="p-3">{customer.extra || "-"}</td>
+                  <td className="p-3 font-medium">
+                    {new Intl.NumberFormat("id-ID", {
+                      style: "currency",
+                      currency: "IDR",
+                      minimumFractionDigits: 0,
+                    }).format(customer.total_purchases || 0)}
                   </td>
-                  <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex space-x-2">
+                  <td
+                    className="p-3 text-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="flex space-x-2 justify-center">
                       <button
                         className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-blue-50"
                         title="Edit Customer"
@@ -366,17 +636,20 @@ const CustomerPage = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="7" className="p-8 text-center text-gray-500">
-                  {searchTerm ? (
+                <td colSpan="8" className="p-8 text-center text-gray-500">
+                  {searchTerm || selectedCity ? (
                     <div>
                       <p className="mb-2">
                         No customers match your search criteria.
                       </p>
                       <button
                         className="text-blue-500 hover:text-blue-700"
-                        onClick={() => setSearchTerm("")}
+                        onClick={() => {
+                          setSearchTerm("");
+                          setSelectedCity("");
+                        }}
                       >
-                        Clear search
+                        Clear filters
                       </button>
                     </div>
                   ) : (
@@ -454,6 +727,203 @@ const CustomerPage = () => {
                 Delete
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Customer Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-medium">Add New Customer</h3>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setIsAddModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {formErrors.general && (
+              <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
+                {formErrors.general}
+              </div>
+            )}
+
+            <form onSubmit={handleAddCustomer}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                {/* Customer Code */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Customer Code <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="customer_code"
+                    value={formData.customer_code}
+                    onChange={handleInputChange}
+                    className={`w-full p-2 border rounded-md ${
+                      formErrors.customer_code ? "border-red-500" : ""
+                    }`}
+                    placeholder="Enter customer code"
+                  />
+                  {formErrors.customer_code && (
+                    <p className="mt-1 text-sm text-red-500">
+                      {formErrors.customer_code}
+                    </p>
+                  )}
+                </div>
+
+                {/* Customer ID */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Customer ID <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="customer_id"
+                    value={formData.customer_id}
+                    onChange={handleInputChange}
+                    className={`w-full p-2 border rounded-md ${
+                      formErrors.customer_id ? "border-red-500" : ""
+                    }`}
+                    placeholder="Enter customer ID"
+                  />
+                  {formErrors.customer_id && (
+                    <p className="mt-1 text-sm text-red-500">
+                      {formErrors.customer_id}
+                    </p>
+                  )}
+                </div>
+
+                {/* Business Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Business Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="business_name"
+                    value={formData.business_name}
+                    onChange={handleInputChange}
+                    className={`w-full p-2 border rounded-md ${
+                      formErrors.business_name ? "border-red-500" : ""
+                    }`}
+                    placeholder="Enter business name"
+                  />
+                  {formErrors.business_name && (
+                    <p className="mt-1 text-sm text-red-500">
+                      {formErrors.business_name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Owner Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Owner Name
+                  </label>
+                  <input
+                    type="text"
+                    name="owner_name"
+                    value={formData.owner_name}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                    placeholder="Enter owner name"
+                  />
+                </div>
+
+                {/* City */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                    placeholder="Enter city"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="text"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+
+                {/* Address */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    name="address_1"
+                    value={formData.address_1}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                    placeholder="Enter address"
+                  />
+                </div>
+
+                {/* Price Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Price Type
+                  </label>
+                  <select
+                    name="price_type"
+                    value={formData.price_type}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="Standard">Standard</option>
+                    <option value="Retail">Retail</option>
+                    <option value="Wholesale">Wholesale</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-4 space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition flex items-center"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle size={18} className="mr-2" />
+                      Save Customer
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
