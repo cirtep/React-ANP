@@ -19,6 +19,9 @@ import {
   Mail,
   FileText,
   ChevronDown,
+  Upload,
+  Save,
+  AlertTriangle,
 } from "lucide-react";
 
 const CustomerPage = () => {
@@ -28,28 +31,25 @@ const CustomerPage = () => {
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCustomers, setSelectedCustomers] = useState([]);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    customer_code: "",
-    customer_id: "",
-    business_name: "",
-    owner_name: "",
-    city: "",
-    phone: "",
-    address_1: "",
-    price_type: "Standard",
-  });
-  const [formErrors, setFormErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
+  const [importError, setImportError] = useState(null);
   const [availableCities, setAvailableCities] = useState([]);
   const [selectedCity, setSelectedCity] = useState("");
   const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editCustomerData, setEditCustomerData] = useState(null);
+  const [editFormErrors, setEditFormErrors] = useState({});
+  const [editSubmitting, setEditSubmitting] = useState(false);
 
   const dropdownRef = useRef(null);
+  const fileInputRef = useRef(null);
   const navigate = useNavigate();
+
+  const baseUrl = import.meta.env.VITE_BASE_URL;
 
   // Handle clicking outside the city dropdown
   useEffect(() => {
@@ -70,15 +70,12 @@ const CustomerPage = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/api/customer/all`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const response = await fetch(`${baseUrl}/api/customer/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch customers");
@@ -86,10 +83,8 @@ const CustomerPage = () => {
 
       const data = await response.json();
 
-      // Sort customers by purchase amount (descending)
-      const sortedCustomers = [...data.data].sort(
-        (a, b) => (b.total_purchases || 0) - (a.total_purchases || 0)
-      );
+      // Sort customers by purchase amount (descending) - already done in the backend
+      const sortedCustomers = data.data;
 
       setCustomers(sortedCustomers);
 
@@ -147,28 +142,6 @@ const CustomerPage = () => {
     setCurrentPage(1);
   }, [searchTerm, selectedCity]);
 
-  // Select/Deselect customer
-  const handleSelectCustomer = (customerId) => {
-    setSelectedCustomers((prev) =>
-      prev.includes(customerId)
-        ? prev.filter((id) => id !== customerId)
-        : [...prev, customerId]
-    );
-  };
-
-  // Select all customers on current page
-  const handleSelectAllOnPage = () => {
-    const currentPageCustomerIds = paginatedCustomers.map((c) => c.id);
-    setSelectedCustomers((prev) => {
-      const allSelected = currentPageCustomerIds.every((id) =>
-        prev.includes(id)
-      );
-      return allSelected
-        ? prev.filter((id) => !currentPageCustomerIds.includes(id))
-        : [...new Set([...prev, ...currentPageCustomerIds])];
-    });
-  };
-
   // Delete customer
   const confirmDelete = (customer) => {
     setCustomerToDelete(customer);
@@ -181,9 +154,7 @@ const CustomerPage = () => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/api/customer/delete/${
-          customerToDelete.customer_id
-        }`,
+        `${baseUrl}/api/customer/delete/${customerToDelete.customer_id}`,
         {
           method: "DELETE",
           headers: {
@@ -194,13 +165,9 @@ const CustomerPage = () => {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to delete customer");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to delete customer");
       }
-
-      // Remove from selected customers
-      setSelectedCustomers((prev) =>
-        prev.filter((id) => id !== customerToDelete.id)
-      );
 
       // Remove from customers list
       setCustomers((prev) => prev.filter((c) => c.id !== customerToDelete.id));
@@ -208,8 +175,12 @@ const CustomerPage = () => {
       // Close modal
       setIsDeleteModalOpen(false);
       setCustomerToDelete(null);
+
+      // Show success message
+      alert("Customer deleted successfully");
     } catch (err) {
       console.error("Error deleting customer:", err);
+      alert(`Error: ${err.message}`);
     }
   };
 
@@ -218,148 +189,221 @@ const CustomerPage = () => {
     navigate(`/customer/${customerId}`);
   };
 
-  // Handle form input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-
-    // Clear error for this field if it exists
-    if (formErrors[name]) {
-      setFormErrors({
-        ...formErrors,
-        [name]: null,
-      });
-    }
+  // Open import modal
+  const handleOpenImport = () => {
+    setImportFile(null);
+    setImportError(null);
+    setIsImportModalOpen(true);
   };
 
-  // Validate form
-  const validateForm = () => {
-    const errors = {};
-    if (!formData.customer_code.trim()) {
-      errors.customer_code = "Customer code is required";
-    }
-    if (!formData.customer_id.trim()) {
-      errors.customer_id = "Customer ID is required";
-    }
-    if (!formData.business_name.trim()) {
-      errors.business_name = "Business name is required";
-    }
-
-    return errors;
+  // Handle file selection for import
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setImportFile(file);
+    setImportError(null);
   };
 
-  // Submit form to add customer
-  const handleAddCustomer = async (e) => {
-    e.preventDefault();
-
-    // Validate form
-    const errors = validateForm();
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
+  // Import customers from file
+  const handleImportCustomers = async () => {
+    if (!importFile) {
+      setImportError("Please select a file to import");
       return;
     }
 
-    setIsSubmitting(true);
+    const fileExtension = importFile.name.split(".").pop().toLowerCase();
+    if (!["csv", "xls", "xlsx"].includes(fileExtension)) {
+      setImportError(
+        "Invalid file format. Please use CSV, XLS, or XLSX files."
+      );
+      return;
+    }
+
+    setImportLoading(true);
+    setImportError(null);
+
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", importFile);
+
+      const response = await fetch(`${baseUrl}/api/import/customers`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || "Import failed");
+      }
+
+      // Close modal and refresh customer list
+      setIsImportModalOpen(false);
+      fetchCustomers();
+      alert("Customers imported successfully");
+    } catch (err) {
+      setImportError(err.message);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  // Export customers to Excel
+  const exportCustomers = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("token");
+      let url = `${baseUrl}/api/customer/export`;
+
+      // Add filter if city is selected
+      if (selectedCity) {
+        url += `?city=${encodeURIComponent(selectedCity)}`;
+      }
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to export customers");
+      }
+
+      // Get filename from Content-Disposition header if available
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = "customers_export.xlsx";
+      if (contentDisposition) {
+        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+        const matches = filenameRegex.exec(contentDisposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, "");
+        }
+      }
+
+      // Create a blob from the response
+      const blob = await response.blob();
+      const url2 = window.URL.createObjectURL(blob);
+
+      // Create a link and trigger download
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url2;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+
+      // Clean up
+      window.URL.revokeObjectURL(url2);
+      document.body.removeChild(a);
+
+      // Show success message
+      alert("Customers exported successfully to Excel");
+    } catch (err) {
+      console.error("Error exporting customers:", err);
+      alert(`Error exporting customers: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open edit modal
+  const handleOpenEdit = (customer) => {
+    setEditCustomerData({ ...customer });
+    setEditFormErrors({});
+    setIsEditModalOpen(true);
+  };
+
+  // Handle edit form changes
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditCustomerData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
+    // Clear error for this field
+    if (editFormErrors[name]) {
+      setEditFormErrors((prev) => ({
+        ...prev,
+        [name]: null,
+      }));
+    }
+  };
+
+  // Validate edit form
+  const validateEditForm = () => {
+    const errors = {};
+    if (!editCustomerData.business_name?.trim()) {
+      errors.business_name = "Business name is required";
+    }
+    return errors;
+  };
+
+  // Submit edit form
+  const handleSubmitEdit = async (e) => {
+    e.preventDefault();
+
+    const errors = validateEditForm();
+    if (Object.keys(errors).length > 0) {
+      setEditFormErrors(errors);
+      return;
+    }
+
+    setEditSubmitting(true);
 
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/api/customer/create`,
+        `${baseUrl}/api/customer/update/${editCustomerData.customer_id}`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify({
+            business_name: editCustomerData.business_name,
+            owner_name: editCustomerData.owner_name,
+            city: editCustomerData.city,
+            extra: editCustomerData.extra,
+            address_1: editCustomerData.address_1,
+            price_type: editCustomerData.price_type,
+            npwp: editCustomerData.npwp,
+            nik: editCustomerData.nik,
+          }),
         }
       );
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || "Failed to add customer");
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update customer");
       }
 
-      // Add new customer to list and close modal
-      await fetchCustomers(); // Refresh the customer list
-      setIsAddModalOpen(false);
-
-      // Reset form
-      setFormData({
-        customer_code: "",
-        customer_id: "",
-        business_name: "",
-        owner_name: "",
-        city: "",
-        phone: "",
-        address_1: "",
-        price_type: "Standard",
-      });
-      setFormErrors({});
+      // Close modal and refresh data
+      setIsEditModalOpen(false);
+      fetchCustomers();
+      alert("Customer updated successfully");
     } catch (err) {
-      setFormErrors({
+      setEditFormErrors({
         general: err.message,
       });
     } finally {
-      setIsSubmitting(false);
+      setEditSubmitting(false);
     }
   };
 
-  // Export customers to CSV
-  const exportCustomers = () => {
-    // Create CSV header
-    const headers = [
-      "Customer ID",
-      "Business Name",
-      "Owner",
-      "City",
-      "Phone",
-      "Address",
-      "Price Type",
-    ];
-
-    // Map customers to CSV rows
-    const csvData = filteredCustomers.map((customer) => [
-      customer.customer_id || "",
-      customer.business_name || "",
-      customer.owner_name || "",
-      customer.city || "",
-      customer.phone || "",
-      customer.address_1 || "",
-      customer.price_type || "Standard",
-    ]);
-
-    // Add headers to the beginning
-    csvData.unshift(headers);
-
-    // Convert to CSV string
-    const csvString = csvData
-      .map((row) =>
-        row
-          .map((cell) => {
-            // Escape quotes and wrap cell in quotes if it contains commas or quotes
-            const escaped = String(cell).replace(/"/g, '""');
-            return `"${escaped}"`;
-          })
-          .join(",")
-      )
-      .join("\\n");
-
-    // Create download link
-    const link = document.createElement("a");
-    link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csvString);
-    link.download = `customers_export_${new Date()
-      .toISOString()
-      .slice(0, 10)}.csv`;
-
-    // Trigger download
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Format currency for display
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
 
   // Render loading state
@@ -396,17 +440,14 @@ const CustomerPage = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Customers</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Manage your customer database and view analytics
-          </p>
         </div>
         <div className="flex items-center space-x-2">
           <button
             className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-blue-600 transition"
-            title="Add New Customer"
-            onClick={() => setIsAddModalOpen(true)}
+            title="Import Customers"
+            onClick={handleOpenImport}
           >
-            <PlusCircle className="mr-2" size={18} /> Add Customer
+            <Upload className="mr-2" size={18} /> Import Customers
           </button>
           <button
             className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
@@ -417,81 +458,12 @@ const CustomerPage = () => {
           </button>
           <button
             className="bg-green-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-green-600 transition"
-            title="Export Customers to CSV"
+            title="Export Customers to Excel"
             onClick={exportCustomers}
+            disabled={loading}
           >
-            <Download className="mr-2" size={18} /> Export CSV
+            <Download className="mr-2" size={18} /> Export to Excel
           </button>
-        </div>
-      </div>
-
-      {/* Search and Filters */}
-      <div className="flex flex-wrap gap-4 mb-5">
-        <div className="relative flex-grow mr-4">
-          <input
-            type="text"
-            placeholder="Search customers by name, code, or city..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
-        </div>
-
-        {/* City filter dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
-            onClick={() => setShowCityDropdown(!showCityDropdown)}
-          >
-            <MapPin className="mr-2" size={18} />
-            {selectedCity || "Filter by City"}
-            <ChevronDown className="ml-2" size={16} />
-          </button>
-
-          {showCityDropdown && (
-            <div className="absolute z-10 right-0 mt-1 w-56 bg-white rounded-md shadow-lg py-1 max-h-64 overflow-y-auto">
-              <div className="px-3 py-2 border-b border-gray-200">
-                <input
-                  type="text"
-                  placeholder="Search cities..."
-                  className="w-full px-2 py-1 border rounded-md text-sm"
-                  onChange={(e) => {
-                    const searchValue = e.target.value.toLowerCase();
-                    // Filtering happens in the rendered list below
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-
-              <button
-                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                onClick={() => {
-                  setSelectedCity("");
-                  setShowCityDropdown(false);
-                }}
-              >
-                All Cities
-              </button>
-
-              {availableCities.map((city) => (
-                <button
-                  key={city}
-                  className={`block w-full text-left px-4 py-2 text-sm ${
-                    selectedCity === city
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-gray-700 hover:bg-gray-100"
-                  }`}
-                  onClick={() => {
-                    setSelectedCity(city);
-                    setShowCityDropdown(false);
-                  }}
-                >
-                  {city}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
@@ -536,24 +508,77 @@ const CustomerPage = () => {
         </div>
       </div>
 
+      {/* Search and Filters */}
+      <div className="flex flex-wrap gap-4 mb-5">
+        <div className="relative flex-grow mr-4">
+          <input
+            type="text"
+            placeholder="Search customers by name, code, or city..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+        </div>
+
+        {/* City filter dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
+            onClick={() => setShowCityDropdown(!showCityDropdown)}
+          >
+            <MapPin className="mr-2" size={18} />
+            {selectedCity || "Filter by City"}
+            <ChevronDown className="ml-2" size={16} />
+          </button>
+
+          {showCityDropdown && (
+            <div className="absolute z-10 right-0 mt-1 w-56 bg-white rounded-md shadow-lg py-1 max-h-64 overflow-y-auto">
+              <div className="px-3 py-2 border-b border-gray-200">
+                <input
+                  type="text"
+                  placeholder="Search cities..."
+                  className="w-full px-2 py-1 border rounded-md text-sm"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              <button
+                className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                onClick={() => {
+                  setSelectedCity("");
+                  setShowCityDropdown(false);
+                }}
+              >
+                All Cities
+              </button>
+
+              {availableCities.map((city) => (
+                <button
+                  key={city}
+                  className={`block w-full text-left px-4 py-2 text-sm ${
+                    selectedCity === city
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-gray-700 hover:bg-gray-100"
+                  }`}
+                  onClick={() => {
+                    setSelectedCity(city);
+                    setShowCityDropdown(false);
+                  }}
+                >
+                  {city}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Customer Table */}
       <div className="overflow-x-auto rounded-md border border-gray-200">
         <table className="w-full border-collapse">
           <thead className="bg-gray-50">
             <tr>
-              <th className="p-3 text-left">
-                <input
-                  type="checkbox"
-                  checked={
-                    paginatedCustomers.length > 0 &&
-                    paginatedCustomers.every((c) =>
-                      selectedCustomers.includes(c.id)
-                    )
-                  }
-                  onChange={handleSelectAllOnPage}
-                  className="form-checkbox h-5 w-5 text-blue-500 rounded"
-                />
-              </th>
               <th className="p-3 text-left text-sm font-medium text-gray-500">
                 Customer ID
               </th>
@@ -569,7 +594,7 @@ const CustomerPage = () => {
               <th className="p-3 text-left text-sm font-medium text-gray-500">
                 Phone
               </th>
-              <th className="p-3 text-left text-sm font-medium text-gray-500">
+              <th className="p-3 text-right text-sm font-medium text-gray-500">
                 Total Purchases
               </th>
               <th className="p-3 text-center text-sm font-medium text-gray-500">
@@ -585,25 +610,13 @@ const CustomerPage = () => {
                   className="border-t border-gray-200 hover:bg-gray-50 transition cursor-pointer"
                   onClick={() => goToCustomerDetail(customer.customer_id)}
                 >
-                  <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selectedCustomers.includes(customer.id)}
-                      onChange={() => handleSelectCustomer(customer.id)}
-                      className="form-checkbox h-5 w-5 text-blue-500 rounded"
-                    />
-                  </td>
                   <td className="p-3 font-medium">{customer.customer_id}</td>
                   <td className="p-3">{customer.business_name}</td>
                   <td className="p-3">{customer.owner_name || "-"}</td>
                   <td className="p-3">{customer.city || "-"}</td>
                   <td className="p-3">{customer.extra || "-"}</td>
-                  <td className="p-3 font-medium">
-                    {new Intl.NumberFormat("id-ID", {
-                      style: "currency",
-                      currency: "IDR",
-                      minimumFractionDigits: 0,
-                    }).format(customer.total_purchases || 0)}
+                  <td className="p-3 font-medium text-right">
+                    {formatCurrency(customer.total_purchases || 0)}
                   </td>
                   <td
                     className="p-3 text-center"
@@ -613,16 +626,28 @@ const CustomerPage = () => {
                       <button
                         className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-blue-50"
                         title="Edit Customer"
+                        onClick={() => handleOpenEdit(customer)}
                       >
                         <Edit2 size={16} />
                       </button>
                       <button
-                        className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
-                        title="Delete Customer"
+                        className={`text-red-500 p-1 rounded-full ${
+                          customer.total_purchases > 0
+                            ? "opacity-50 cursor-not-allowed"
+                            : "hover:bg-red-50 hover:text-red-700"
+                        }`}
+                        title={
+                          customer.total_purchases > 0
+                            ? "Cannot delete customer with existing purchases"
+                            : "Delete Customer"
+                        }
                         onClick={() => confirmDelete(customer)}
+                        disabled={customer.total_purchases > 0}
+                        aria-disabled={customer.total_purchases > 0}
                       >
                         <Trash2 size={16} />
                       </button>
+
                       <button
                         className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-50"
                         title="View Details"
@@ -636,7 +661,7 @@ const CustomerPage = () => {
               ))
             ) : (
               <tr>
-                <td colSpan="8" className="p-8 text-center text-gray-500">
+                <td colSpan="7" className="p-8 text-center text-gray-500">
                   {searchTerm || selectedCity ? (
                     <div>
                       <p className="mb-2">
@@ -654,7 +679,7 @@ const CustomerPage = () => {
                     </div>
                   ) : (
                     <p>
-                      No customers found. Add your first customer to get
+                      No customers found. Import your first customer to get
                       started.
                     </p>
                   )}
@@ -703,98 +728,205 @@ const CustomerPage = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-xl font-medium mb-2">Confirm deletion</h3>
-            <p className="text-gray-600 mb-4">
-              Are you sure you want to delete customer{" "}
-              <span className="font-medium">
-                {customerToDelete?.business_name}
-              </span>
-              ? This action cannot be undone.
-            </p>
+            {customerToDelete?.total_purchases > 0 ? (
+              <>
+                <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200 mb-4 flex items-start">
+                  <AlertTriangle
+                    className="text-yellow-500 mr-2 mt-0.5"
+                    size={20}
+                  />
+                  <div>
+                    <p className="font-medium text-yellow-700">
+                      Cannot delete customer
+                    </p>
+                    <p className="text-yellow-600">
+                      This customer has existing transactions and cannot be
+                      deleted.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    className="px-4 py-2 bg-gray-100 rounded-md hover:bg-gray-200 transition"
+                    onClick={() => {
+                      setIsDeleteModalOpen(false);
+                      setCustomerToDelete(null);
+                    }}
+                  >
+                    Close
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-600 mb-4">
+                  Are you sure you want to delete customer{" "}
+                  <span className="font-medium">
+                    {customerToDelete?.business_name}
+                  </span>
+                  ? This action cannot be undone.
+                </p>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    className="px-4 py-2 bg-gray-100 rounded-md hover:bg-gray-200 transition"
+                    onClick={() => {
+                      setIsDeleteModalOpen(false);
+                      setCustomerToDelete(null);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+                    onClick={handleDeleteCustomer}
+                  >
+                    Delete
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {isImportModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-medium">Import Customers</h3>
+              <button
+                className="text-gray-500 hover:text-gray-700"
+                onClick={() => setIsImportModalOpen(false)}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {importError && (
+              <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
+                {importError}
+              </div>
+            )}
+
+            <div className="mb-4">
+              <p className="text-gray-600 mb-2">
+                Upload a CSV, XLS, or XLSX file containing customer data.
+              </p>
+              <p className="text-sm text-gray-500 mb-4">
+                The file should have the following columns: customer_code,
+                customer_id, business_name, owner_name, city, etc.
+              </p>
+
+              <div
+                className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept=".csv,.xls,.xlsx"
+                  className="hidden"
+                />
+                {importFile ? (
+                  <div className="flex items-center justify-center">
+                    <FileText className="mr-2 text-blue-500" size={24} />
+                    <span className="font-medium text-blue-700">
+                      {importFile.name}
+                    </span>
+                  </div>
+                ) : (
+                  <div>
+                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                    <p className="mt-2 text-sm text-gray-600">
+                      Click to select or drag and drop
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      CSV, XLS, XLSX up to 10MB
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-end space-x-3">
               <button
                 className="px-4 py-2 bg-gray-100 rounded-md hover:bg-gray-200 transition"
-                onClick={() => {
-                  setIsDeleteModalOpen(false);
-                  setCustomerToDelete(null);
-                }}
+                onClick={() => setIsImportModalOpen(false)}
               >
                 Cancel
               </button>
               <button
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
-                onClick={handleDeleteCustomer}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center"
+                onClick={handleImportCustomers}
+                disabled={!importFile || importLoading}
               >
-                Delete
+                {importLoading ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={18} className="mr-2" />
+                    Import
+                  </>
+                )}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Add Customer Modal */}
-      {isAddModalOpen && (
+      {/* Edit Customer Modal */}
+      {isEditModalOpen && editCustomerData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-medium">Add New Customer</h3>
+              <h3 className="text-xl font-medium">Edit Customer</h3>
               <button
                 className="text-gray-500 hover:text-gray-700"
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => setIsEditModalOpen(false)}
               >
                 <X size={20} />
               </button>
             </div>
 
-            {formErrors.general && (
+            {editFormErrors.general && (
               <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
-                {formErrors.general}
+                {editFormErrors.general}
               </div>
             )}
 
-            <form onSubmit={handleAddCustomer}>
+            <form onSubmit={handleSubmitEdit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                {/* Customer Code */}
+                {/* Customer ID - Read Only */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer Code <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="customer_code"
-                    value={formData.customer_code}
-                    onChange={handleInputChange}
-                    className={`w-full p-2 border rounded-md ${
-                      formErrors.customer_code ? "border-red-500" : ""
-                    }`}
-                    placeholder="Enter customer code"
-                  />
-                  {formErrors.customer_code && (
-                    <p className="mt-1 text-sm text-red-500">
-                      {formErrors.customer_code}
-                    </p>
-                  )}
-                </div>
-
-                {/* Customer ID */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer ID <span className="text-red-500">*</span>
+                    Customer ID
                   </label>
                   <input
                     type="text"
                     name="customer_id"
-                    value={formData.customer_id}
-                    onChange={handleInputChange}
-                    className={`w-full p-2 border rounded-md ${
-                      formErrors.customer_id ? "border-red-500" : ""
-                    }`}
-                    placeholder="Enter customer ID"
+                    value={editCustomerData.customer_id}
+                    disabled
+                    className="w-full p-2 border rounded-md bg-gray-100"
                   />
-                  {formErrors.customer_id && (
-                    <p className="mt-1 text-sm text-red-500">
-                      {formErrors.customer_id}
-                    </p>
-                  )}
+                </div>
+
+                {/* Customer Code - Read Only */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Customer Code
+                  </label>
+                  <input
+                    type="text"
+                    name="customer_code"
+                    value={editCustomerData.customer_code}
+                    disabled
+                    className="w-full p-2 border rounded-md bg-gray-100"
+                  />
                 </div>
 
                 {/* Business Name */}
@@ -805,16 +937,15 @@ const CustomerPage = () => {
                   <input
                     type="text"
                     name="business_name"
-                    value={formData.business_name}
-                    onChange={handleInputChange}
+                    value={editCustomerData.business_name || ""}
+                    onChange={handleEditInputChange}
                     className={`w-full p-2 border rounded-md ${
-                      formErrors.business_name ? "border-red-500" : ""
+                      editFormErrors.business_name ? "border-red-500" : ""
                     }`}
-                    placeholder="Enter business name"
                   />
-                  {formErrors.business_name && (
+                  {editFormErrors.business_name && (
                     <p className="mt-1 text-sm text-red-500">
-                      {formErrors.business_name}
+                      {editFormErrors.business_name}
                     </p>
                   )}
                 </div>
@@ -827,10 +958,9 @@ const CustomerPage = () => {
                   <input
                     type="text"
                     name="owner_name"
-                    value={formData.owner_name}
-                    onChange={handleInputChange}
+                    value={editCustomerData.owner_name || ""}
+                    onChange={handleEditInputChange}
                     className="w-full p-2 border rounded-md"
-                    placeholder="Enter owner name"
                   />
                 </div>
 
@@ -842,10 +972,9 @@ const CustomerPage = () => {
                   <input
                     type="text"
                     name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
+                    value={editCustomerData.city || ""}
+                    onChange={handleEditInputChange}
                     className="w-full p-2 border rounded-md"
-                    placeholder="Enter city"
                   />
                 </div>
 
@@ -856,11 +985,10 @@ const CustomerPage = () => {
                   </label>
                   <input
                     type="text"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
+                    name="extra"
+                    value={editCustomerData.extra || ""}
+                    onChange={handleEditInputChange}
                     className="w-full p-2 border rounded-md"
-                    placeholder="Enter phone number"
                   />
                 </div>
 
@@ -872,35 +1000,30 @@ const CustomerPage = () => {
                   <input
                     type="text"
                     name="address_1"
-                    value={formData.address_1}
-                    onChange={handleInputChange}
+                    value={editCustomerData.address_1 || ""}
+                    onChange={handleEditInputChange}
                     className="w-full p-2 border rounded-md"
-                    placeholder="Enter address"
                   />
                 </div>
-
-                {/* Price Type */}
+                {/* NPWP */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price Type
+                    NPWP
                   </label>
-                  <select
-                    name="price_type"
-                    value={formData.price_type}
-                    onChange={handleInputChange}
+                  <input
+                    type="text"
+                    name="npwp"
+                    value={editCustomerData.npwp || ""}
+                    onChange={handleEditInputChange}
                     className="w-full p-2 border rounded-md"
-                  >
-                    <option value="Standard">Standard</option>
-                    <option value="Retail">Retail</option>
-                    <option value="Wholesale">Wholesale</option>
-                  </select>
+                  />
                 </div>
               </div>
 
               <div className="flex justify-end mt-4 space-x-3">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => setIsEditModalOpen(false)}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
                 >
                   Cancel
@@ -908,17 +1031,17 @@ const CustomerPage = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition flex items-center"
-                  disabled={isSubmitting}
+                  disabled={editSubmitting}
                 >
-                  {isSubmitting ? (
+                  {editSubmitting ? (
                     <>
                       <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
                       Saving...
                     </>
                   ) : (
                     <>
-                      <CheckCircle size={18} className="mr-2" />
-                      Save Customer
+                      <Save size={18} className="mr-2" />
+                      Save Changes
                     </>
                   )}
                 </button>
