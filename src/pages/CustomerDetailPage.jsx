@@ -822,13 +822,24 @@ const CustomerDetailPage = () => {
                     }
                   />
                   <Tooltip
-                    formatter={(value, name) => {
-                      if (name === "Actual Sales") {
-                        return [formatCurrency(value), "Sales"];
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const actual = payload.find(
+                          (p) => p.name === "Actual Sales"
+                        );
+                        if (!actual) return null;
+
+                        return (
+                          <div className="bg-white border rounded shadow p-2 text-sm">
+                            <div className="font-semibold">Period: {label}</div>
+                            <div className="text-blue-600">
+                              {actual.name}: {formatCurrency(actual.value)}
+                            </div>
+                          </div>
+                        );
                       }
-                      return null; // Don't show trend in tooltip
+                      return null;
                     }}
-                    labelFormatter={(label) => `Period: ${label}`}
                   />
                   <Legend />
                   <Line

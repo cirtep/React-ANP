@@ -95,7 +95,6 @@ const SettingsOverlay = () => {
   // Component for consistent import forms
   const ImportForm = ({
     title,
-    icon,
     description,
     file,
     setFile,
