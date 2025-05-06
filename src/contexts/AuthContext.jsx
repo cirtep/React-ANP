@@ -28,8 +28,6 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (username, password) => {
-    // setLoading(true);
-
     try {
       const response = await fetch(`${baseUrl}/api/auth/login`, {
         method: "POST",
@@ -49,8 +47,6 @@ export const AuthProvider = ({ children }) => {
           throw new Error(
             "Your account has been locked. Please contact support."
           );
-        } else if (response.status === 429) {
-          throw new Error("Too many failed attempts. Please try again later.");
         } else {
           throw new Error(data.message || "Login failed");
         }
@@ -62,10 +58,8 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("token", data.data.access_token);
       localStorage.setItem("user", JSON.stringify(data.data.user));
 
-      // setLoading(false);
       return { success: true };
     } catch (err) {
-      // setLoading(false);
       return {
         success: false,
         error: err.message || "An error occurred during login",

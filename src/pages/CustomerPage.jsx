@@ -534,15 +534,6 @@ const CustomerPage = () => {
 
           {showCityDropdown && (
             <div className="absolute z-10 right-0 mt-1 w-56 bg-white rounded-md shadow-lg py-1 max-h-64 overflow-y-auto">
-              <div className="px-3 py-2 border-b border-gray-200">
-                <input
-                  type="text"
-                  placeholder="Search cities..."
-                  className="w-full px-2 py-1 border rounded-md text-sm"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-
               <button
                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 onClick={() => {

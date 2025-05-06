@@ -104,9 +104,6 @@ const SettingsOverlay = () => {
   }) => (
     <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 transition-all hover:shadow-lg">
       <div className="flex items-center gap-3 mb-3">
-        <div className="bg-blue-100 p-2 rounded-full text-blue-700">
-          {icon || "📄"}
-        </div>
         <h3 className="font-semibold text-gray-800">{title}</h3>
       </div>
 
@@ -129,9 +126,7 @@ const SettingsOverlay = () => {
               onChange={(e) => setFile(e.target.files[0] || null)}
             />
             {!file && (
-              <p className="text-center text-gray-500 mt-2">
-                Pilih file atau drag & drop di sini
-              </p>
+              <p className="text-center text-gray-500 mt-2">Choose file</p>
             )}
           </div>
 
@@ -154,7 +149,7 @@ const SettingsOverlay = () => {
         <button
           onClick={onImport}
           disabled={loading}
-          className={`w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-md transition duration-200 
+          className={`w-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-md transition duration-200 
             ${loading && activeImport === type ? "bg-blue-400" : ""} 
             disabled:bg-blue-300 disabled:cursor-not-allowed flex justify-center items-center gap-2`}
         >
@@ -176,29 +171,14 @@ const SettingsOverlay = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white shadow-md flex items-center justify-between p-4 border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <div className="bg-blue-100 p-2 rounded-full">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5 text-blue-700"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path
-                fillRule="evenodd"
-                d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </div>
           <h1 className="text-xl font-bold text-gray-800">Settings</h1>
         </div>
-
         <button
           onClick={handleClose}
-          className="text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center transition duration-200"
+          className="cursor-pointer text-gray-500 hover:text-gray-700 bg-gray-200 hover:bg-gray-300 rounded-full w-8 h-8 flex items-center justify-center transition duration-200"
           aria-label="Close Settings"
         >
-          ×
+          X
         </button>
       </div>
 
@@ -262,8 +242,7 @@ const SettingsOverlay = () => {
                 Data Import
               </h2>
               <p className="text-gray-600">
-                Upload files below to import your data. We support .xlsx, .xls,
-                and .csv formats.
+                Upload files below to import your data.
               </p>
             </div>
 
@@ -271,8 +250,7 @@ const SettingsOverlay = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <ImportForm
                 title="Transaction Data"
-                icon="💼"
-                description="Import transaction history including orders, sales, and payments."
+                description="Import transaction history."
                 file={transactionFile}
                 setFile={setTransactionFile}
                 onImport={handleImportTransaction}
@@ -281,8 +259,7 @@ const SettingsOverlay = () => {
 
               <ImportForm
                 title="Product Data"
-                icon="📦"
-                description="Import product catalog with details like name, price, and category."
+                description="Import product catalog."
                 file={productFile}
                 setFile={setProductFile}
                 onImport={handleImportProduct}
@@ -291,8 +268,7 @@ const SettingsOverlay = () => {
 
               <ImportForm
                 title="Customer Data"
-                icon="👥"
-                description="Import customer information including contacts and preferences."
+                description="Import customer information."
                 file={customerFile}
                 setFile={setCustomerFile}
                 onImport={handleImportCustomer}
@@ -301,8 +277,7 @@ const SettingsOverlay = () => {
 
               <ImportForm
                 title="Product Stock Data"
-                icon="🏬"
-                description="Import inventory levels and stock movement data."
+                description="Import product stock."
                 file={productStockFile}
                 setFile={setProductStockFile}
                 onImport={handleImportProductStock}
