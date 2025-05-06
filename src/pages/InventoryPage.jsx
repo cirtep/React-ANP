@@ -573,9 +573,6 @@ const InventoryPage = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Inventory</h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Track stock levels and manage your products
-          </p>
         </div>
         <div className="flex items-center space-x-2">
           <div className="relative" ref={importDropdownRef}>

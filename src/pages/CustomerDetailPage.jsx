@@ -571,8 +571,8 @@ const CustomerDetailPage = () => {
   // Calculate additional metrics for analysis
   // const purchaseFrequency = calculatePurchaseFrequency();
   // const loyaltyScore = calculateLoyaltyScore();
-  const { trend: purchaseTrend, description: trendDescription } =
-    calculatePurchaseTrend();
+  // const { trend: purchaseTrend, description: trendDescription } =
+  calculatePurchaseTrend();
   // const customerSegment = calculateCustomerSegment();
   const quarterlyData = generateQuarterlyData();
   // const radarData = generateRadarData();
@@ -594,20 +594,6 @@ const CustomerDetailPage = () => {
           <p className="text-gray-500 text-sm">
             Customer ID: {customer?.customer_id}
           </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
-            title="Export Data"
-          >
-            <Download className="mr-2" size={18} /> Export
-          </button>
-          <button
-            className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-blue-600 transition"
-            title="Edit Customer"
-          >
-            <Edit2 className="mr-2" size={18} /> Edit
-          </button>
         </div>
       </div>
 
@@ -866,48 +852,84 @@ const CustomerDetailPage = () => {
 
           {/* Two-column layout for Top Products and Customer Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Top Products */}
-            <div className="bg-white rounded-lg border border-gray-200 p-4">
+            {/* Top Products with Pie Chart */}
+            <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col h-full">
               <h2 className="text-lg font-semibold mb-4">
                 Top 8 Products by Sales
               </h2>
 
               {salesData.top_products && salesData.top_products.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="text-left p-2">Product</th>
-                        <th className="text-right p-2">Qty</th>
-                        <th className="text-right p-2">Sales</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {salesData.top_products.map((product, index) => (
-                        <tr key={index} className="border-t border-gray-100">
-                          <td className="p-2">
-                            <div className="flex items-center">
-                              <div
-                                className="w-2 h-2 rounded-full mr-2"
-                                style={{
-                                  backgroundColor:
-                                    COLORS[index % COLORS.length],
-                                }}
-                              ></div>
-                              {product.product_name}
-                            </div>
-                          </td>
-                          <td className="p-2 text-right">
-                            {formatNumber(product.qty)}
-                          </td>
-                          <td className="p-2 text-right font-medium">
-                            {formatCurrency(product.total_amount)}
-                          </td>
+                <>
+                  {/* Add Pie Chart Visualization */}
+                  <div className="h-64 mb-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={salesData.top_products}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="total_amount"
+                          nameKey="product_name"
+                          label={({ name, percent }) =>
+                            `${
+                              name.length > 10
+                                ? name.substring(0, 10) + "..."
+                                : name
+                            }: ${(percent * 100).toFixed(0)}%`
+                          }
+                        >
+                          {salesData.top_products.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={COLORS[index % COLORS.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value) => formatCurrency(value)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  {/* Table of Top Products */}
+                  <div className="overflow-x-auto flex-grow">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left p-2">Product</th>
+                          <th className="text-right p-2">Qty</th>
+                          <th className="text-right p-2">Sales</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {salesData.top_products.map((product, index) => (
+                          <tr key={index} className="border-t border-gray-100">
+                            <td className="p-2">
+                              <div className="flex items-center">
+                                <div
+                                  className="w-2 h-2 rounded-full mr-2"
+                                  style={{
+                                    backgroundColor:
+                                      COLORS[index % COLORS.length],
+                                  }}
+                                ></div>
+                                {product.product_name}
+                              </div>
+                            </td>
+                            <td className="p-2 text-right">
+                              {formatNumber(product.qty)}
+                            </td>
+                            <td className="p-2 text-right font-medium">
+                              {formatCurrency(product.total_amount)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-500">
                   <ShoppingCart size={48} className="mb-4 opacity-20" />
@@ -940,9 +962,9 @@ const CustomerDetailPage = () => {
                       <Building size={16} className="text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Business Type</p>
+                      <p className="text-sm text-gray-500">Business Name</p>
                       <p className="font-medium">
-                        {customer?.price_type || "Standard"}
+                        {customer?.business_name || "Not specified"}
                       </p>
                     </div>
                   </div>
@@ -962,18 +984,18 @@ const CustomerDetailPage = () => {
                       <Award size={16} className="text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-500">Purchase Trend</p>
+                      <p className="text-sm text-gray-500">YTD Growth</p>
                       <p className="font-medium flex items-center">
-                        {trendDescription}
+                        {formatCurrency(salesData.this_ytd_sales)}
                         <span
                           className={`ml-2 text-xs ${
-                            purchaseTrend >= 0
+                            salesData.ytd_growth >= 0
                               ? "text-green-600"
                               : "text-red-600"
                           }`}
                         >
-                          {purchaseTrend >= 0 ? "↑" : "↓"}{" "}
-                          {Math.abs(purchaseTrend).toFixed(1)}%
+                          {salesData.ytd_growth >= 0 ? "↑" : "↓"}{" "}
+                          {Math.abs(salesData.ytd_growth).toFixed(1)}%
                         </span>
                       </p>
                     </div>
@@ -981,7 +1003,7 @@ const CustomerDetailPage = () => {
                 </div>
               </div>
 
-              {/* Recent Transactions */}
+              {/* Recent Transactions - With matching height as top products */}
               <div className="bg-white rounded-lg border border-gray-200 p-4 flex-grow">
                 <h2 className="text-lg font-semibold mb-3">
                   Recent Transactions
@@ -989,9 +1011,9 @@ const CustomerDetailPage = () => {
 
                 {salesData.recent_transactions &&
                 salesData.recent_transactions.length > 0 ? (
-                  <div className="overflow-y-auto max-h-[214px]">
+                  <div className="overflow-y-auto" style={{ height: "330px" }}>
                     <table className="w-full text-sm">
-                      <thead className="bg-gray-50">
+                      <thead className="bg-gray-50 sticky top-0 z-10">
                         <tr>
                           <th className="text-left p-2">Invoice</th>
                           <th className="text-left p-2">Date</th>
@@ -1336,11 +1358,39 @@ const CustomerDetailPage = () => {
                   />
                   <Tooltip
                     formatter={(value, name) => {
+                      // Determine the year based on the data key
                       const year =
                         name === "currentYear"
                           ? new Date().getFullYear()
                           : new Date().getFullYear() - 1;
+
                       return [formatCurrency(value), `${year}`];
+                    }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        const currentYear = new Date().getFullYear();
+                        return (
+                          <div className="bg-white border rounded shadow p-3 text-sm">
+                            <div className="font-semibold mb-1">{label}</div>
+                            {payload.map((entry, index) => (
+                              <div
+                                key={index}
+                                style={{ color: entry.color }}
+                                className="mb-1"
+                              >
+                                {entry.dataKey === "currentYear"
+                                  ? `${currentYear}: ${formatCurrency(
+                                      entry.value
+                                    )}`
+                                  : `${currentYear - 1}: ${formatCurrency(
+                                      entry.value
+                                    )}`}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return null;
                     }}
                   />
                   <Legend />
@@ -1365,7 +1415,7 @@ const CustomerDetailPage = () => {
 
           {/* Monthly Sales Area Chart */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
-            <h2 className="text-lg font-semibold mb-4">Monthly Sales Trend</h2>
+            <h2 className="text-lg font-semibold mb-4">Monthly Sales</h2>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
@@ -1383,7 +1433,29 @@ const CustomerDetailPage = () => {
                     }
                   />
                   <Tooltip
-                    formatter={(value) => [formatCurrency(value), "Sales"]}
+                    formatter={(value, name) => {
+                      if (name === "amount") {
+                        return [formatCurrency(value), "Sales"];
+                      }
+                      return [value, name];
+                    }}
+                    content={({ active, payload, label }) => {
+                      if (active && payload && payload.length) {
+                        return (
+                          <div className="bg-white border rounded shadow p-3 text-sm">
+                            <div className="font-semibold mb-1">{label}</div>
+                            <div className="text-blue-600 mb-1">
+                              Sales: {formatCurrency(payload[0].value)}
+                            </div>
+                            <div className="text-gray-700">
+                              Orders:{" "}
+                              {formatNumber(payload[0].payload.order_count)}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
                   />
                   <Area
                     type="monotone"

@@ -367,14 +367,36 @@ const CustomerPage = () => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
+            // Basic information
             business_name: editCustomerData.business_name,
             owner_name: editCustomerData.owner_name,
             city: editCustomerData.city,
             extra: editCustomerData.extra,
-            address_1: editCustomerData.address_1,
-            price_type: editCustomerData.price_type,
             npwp: editCustomerData.npwp,
             nik: editCustomerData.nik,
+            religion: editCustomerData.religion,
+
+            // Business address
+            address_1: editCustomerData.address_1,
+            address_2: editCustomerData.address_2,
+            address_3: editCustomerData.address_3,
+            address_4: editCustomerData.address_4,
+            address_5: editCustomerData.address_5,
+
+            // Owner address
+            owner_address_1: editCustomerData.owner_address_1,
+            owner_address_2: editCustomerData.owner_address_2,
+            owner_address_3: editCustomerData.owner_address_3,
+            owner_address_4: editCustomerData.owner_address_4,
+            owner_address_5: editCustomerData.owner_address_5,
+
+            // Additional address
+            additional_address: editCustomerData.additional_address,
+            additional_address_1: editCustomerData.additional_address_1,
+            additional_address_2: editCustomerData.additional_address_2,
+            additional_address_3: editCustomerData.additional_address_3,
+            additional_address_4: editCustomerData.additional_address_4,
+            additional_address_5: editCustomerData.additional_address_5,
           }),
         }
       );
@@ -437,32 +459,38 @@ const CustomerPage = () => {
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Customers</h1>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button
-            className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-blue-600 transition"
+            className="bg-blue-500 text-white px-3 py-2 rounded-md flex items-center hover:bg-blue-600 transition flex-grow sm:flex-grow-0"
             title="Import Customers"
             onClick={handleOpenImport}
           >
-            <Upload className="mr-2" size={18} /> Import Customers
+            <Upload className="mr-2" size={18} />
+            <span className="hidden sm:inline">Import</span>
+            <span className="sm:hidden">Import</span>
           </button>
           <button
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
+            className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md flex items-center hover:bg-gray-200 transition flex-grow sm:flex-grow-0"
             title="Refresh Customers"
             onClick={fetchCustomers}
           >
-            <RefreshCw className="mr-2" size={18} /> Refresh
+            <RefreshCw className="mr-2" size={18} />
+            <span className="hidden sm:inline">Refresh</span>
+            <span className="sm:hidden">Refresh</span>
           </button>
           <button
-            className="bg-green-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-green-600 transition"
+            className="bg-green-500 text-white px-3 py-2 rounded-md flex items-center hover:bg-green-600 transition flex-grow sm:flex-grow-0"
             title="Export Customers to Excel"
             onClick={exportCustomers}
             disabled={loading}
           >
-            <Download className="mr-2" size={18} /> Export to Excel
+            <Download className="mr-2" size={18} />
+            <span className="hidden sm:inline">Export</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
       </div>
@@ -513,7 +541,7 @@ const CustomerPage = () => {
         <div className="relative flex-grow mr-4">
           <input
             type="text"
-            placeholder="Search customers by name, code, or city..."
+            placeholder="Search customers by name, code, ID, or city..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -802,7 +830,7 @@ const CustomerPage = () => {
 
             <div className="mb-4">
               <p className="text-gray-600 mb-2">
-                Upload a CSV, XLS, or XLSX file containing customer data.
+                Upload a XLSX file containing customer data.
               </p>
               <p className="text-sm text-gray-500 mb-4">
                 The file should have the following columns: customer_code,
@@ -834,7 +862,7 @@ const CustomerPage = () => {
                       Click to select or drag and drop
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
-                      CSV, XLS, XLSX up to 10MB
+                      XLSX up to 10MB
                     </p>
                   </div>
                 )}
@@ -873,8 +901,9 @@ const CustomerPage = () => {
       {/* Edit Customer Modal */}
       {isEditModalOpen && editCustomerData && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
+          <div className="bg-white rounded-lg w-full max-w-4xl flex flex-col h-[90vh]">
+            {/* Fixed Header */}
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
               <h3 className="text-xl font-medium">Edit Customer</h3>
               <button
                 className="text-gray-500 hover:text-gray-700"
@@ -885,159 +914,407 @@ const CustomerPage = () => {
             </div>
 
             {editFormErrors.general && (
-              <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
+              <div className="mx-6 mt-4 p-3 bg-red-50 text-red-700 rounded-md border border-red-200">
                 {editFormErrors.general}
               </div>
             )}
 
-            <form onSubmit={handleSubmitEdit}>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                {/* Customer ID - Read Only */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer ID
-                  </label>
-                  <input
-                    type="text"
-                    name="customer_id"
-                    value={editCustomerData.customer_id}
-                    disabled
-                    className="w-full p-2 border rounded-md bg-gray-100"
-                  />
+            {/* Scrollable Form Content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              <form id="customerEditForm" onSubmit={handleSubmitEdit}>
+                {/* Basic Information Section */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-medium text-gray-700 mb-3 border-b pb-2">
+                    Basic Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Customer IDs - Read Only */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Customer ID
+                      </label>
+                      <input
+                        type="text"
+                        name="customer_id"
+                        value={editCustomerData.customer_id}
+                        disabled
+                        className="w-full p-2 border rounded-md bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Customer Code
+                      </label>
+                      <input
+                        type="text"
+                        name="customer_code"
+                        value={editCustomerData.customer_code}
+                        disabled
+                        className="w-full p-2 border rounded-md bg-gray-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    {/* Business Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Business Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="business_name"
+                        value={editCustomerData.business_name || ""}
+                        onChange={handleEditInputChange}
+                        className={`w-full p-2 border rounded-md ${
+                          editFormErrors.business_name ? "border-red-500" : ""
+                        }`}
+                      />
+                      {editFormErrors.business_name && (
+                        <p className="mt-1 text-sm text-red-500">
+                          {editFormErrors.business_name}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Owner Name */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Owner Name
+                      </label>
+                      <input
+                        type="text"
+                        name="owner_name"
+                        value={editCustomerData.owner_name || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    {/* City */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        City
+                      </label>
+                      <input
+                        type="text"
+                        name="city"
+                        value={editCustomerData.city || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+
+                    {/* Phone */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone
+                      </label>
+                      <input
+                        type="text"
+                        name="extra"
+                        value={editCustomerData.extra || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+
+                    {/* Religion */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Religion
+                      </label>
+                      <input
+                        type="text"
+                        name="religion"
+                        value={editCustomerData.religion || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    {/* Tax Info */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        NPWP (Tax ID)
+                      </label>
+                      <input
+                        type="text"
+                        name="npwp"
+                        value={editCustomerData.npwp || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        NIK
+                      </label>
+                      <input
+                        type="text"
+                        name="nik"
+                        value={editCustomerData.nik || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Customer Code - Read Only */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Customer Code
-                  </label>
-                  <input
-                    type="text"
-                    name="customer_code"
-                    value={editCustomerData.customer_code}
-                    disabled
-                    className="w-full p-2 border rounded-md bg-gray-100"
-                  />
+                {/* Business Address Section */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-medium text-gray-700 mb-3 border-b pb-2">
+                    Business Address
+                  </h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Address Line 1
+                      </label>
+                      <input
+                        type="text"
+                        name="address_1"
+                        value={editCustomerData.address_1 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Address Line 2
+                      </label>
+                      <input
+                        type="text"
+                        name="address_2"
+                        value={editCustomerData.address_2 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Address Line 3
+                      </label>
+                      <input
+                        type="text"
+                        name="address_3"
+                        value={editCustomerData.address_3 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Address Line 4
+                      </label>
+                      <input
+                        type="text"
+                        name="address_4"
+                        value={editCustomerData.address_4 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Address Line 5
+                      </label>
+                      <input
+                        type="text"
+                        name="address_5"
+                        value={editCustomerData.address_5 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Business Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Business Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="business_name"
-                    value={editCustomerData.business_name || ""}
-                    onChange={handleEditInputChange}
-                    className={`w-full p-2 border rounded-md ${
-                      editFormErrors.business_name ? "border-red-500" : ""
-                    }`}
-                  />
-                  {editFormErrors.business_name && (
-                    <p className="mt-1 text-sm text-red-500">
-                      {editFormErrors.business_name}
-                    </p>
-                  )}
+                {/* Owner Address Section */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-medium text-gray-700 mb-3 border-b pb-2">
+                    Owner Address
+                  </h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Owner Address Line 1
+                      </label>
+                      <input
+                        type="text"
+                        name="owner_address_1"
+                        value={editCustomerData.owner_address_1 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Owner Address Line 2
+                      </label>
+                      <input
+                        type="text"
+                        name="owner_address_2"
+                        value={editCustomerData.owner_address_2 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Owner Address Line 3
+                      </label>
+                      <input
+                        type="text"
+                        name="owner_address_3"
+                        value={editCustomerData.owner_address_3 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Owner Address Line 4
+                      </label>
+                      <input
+                        type="text"
+                        name="owner_address_4"
+                        value={editCustomerData.owner_address_4 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Owner Address Line 5
+                      </label>
+                      <input
+                        type="text"
+                        name="owner_address_5"
+                        value={editCustomerData.owner_address_5 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Owner Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Owner Name
-                  </label>
-                  <input
-                    type="text"
-                    name="owner_name"
-                    value={editCustomerData.owner_name || ""}
-                    onChange={handleEditInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
+                {/* Additional Address Section */}
+                <div className="mb-6">
+                  <h4 className="text-lg font-medium text-gray-700 mb-3 border-b pb-2">
+                    Additional Address
+                  </h4>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Additional Address
+                      </label>
+                      <input
+                        type="text"
+                        name="additional_address"
+                        value={editCustomerData.additional_address || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Additional Address Line 1
+                      </label>
+                      <input
+                        type="text"
+                        name="additional_address_1"
+                        value={editCustomerData.additional_address_1 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Additional Address Line 2
+                      </label>
+                      <input
+                        type="text"
+                        name="additional_address_2"
+                        value={editCustomerData.additional_address_2 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Additional Address Line 3
+                      </label>
+                      <input
+                        type="text"
+                        name="additional_address_3"
+                        value={editCustomerData.additional_address_3 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Additional Address Line 4
+                      </label>
+                      <input
+                        type="text"
+                        name="additional_address_4"
+                        value={editCustomerData.additional_address_4 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Additional Address Line 5
+                      </label>
+                      <input
+                        type="text"
+                        name="additional_address_5"
+                        value={editCustomerData.additional_address_5 || ""}
+                        onChange={handleEditInputChange}
+                        className="w-full p-2 border rounded-md"
+                      />
+                    </div>
+                  </div>
                 </div>
+              </form>
+            </div>
 
-                {/* City */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={editCustomerData.city || ""}
-                    onChange={handleEditInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    type="text"
-                    name="extra"
-                    value={editCustomerData.extra || ""}
-                    onChange={handleEditInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-
-                {/* Address */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Address
-                  </label>
-                  <input
-                    type="text"
-                    name="address_1"
-                    value={editCustomerData.address_1 || ""}
-                    onChange={handleEditInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-                {/* NPWP */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    NPWP
-                  </label>
-                  <input
-                    type="text"
-                    name="npwp"
-                    value={editCustomerData.npwp || ""}
-                    onChange={handleEditInputChange}
-                    className="w-full p-2 border rounded-md"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end mt-4 space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition flex items-center"
-                  disabled={editSubmitting}
-                >
-                  {editSubmitting ? (
-                    <>
-                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <Save size={18} className="mr-2" />
-                      Save Changes
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+            {/* Fixed Footer with Buttons */}
+            <div className="p-6 border-t border-gray-200 bg-gray-50 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setIsEditModalOpen(false)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="customerEditForm"
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition flex items-center"
+                disabled={editSubmitting}
+              >
+                {editSubmitting ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save size={18} className="mr-2" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
