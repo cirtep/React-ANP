@@ -378,6 +378,7 @@ const InventoryPage = () => {
             qty: editProductData.qty,
             unit: editProductData.unit,
             ppn: editProductData.ppn,
+            use_forecast: Boolean(editProductData.use_forecast),
           }),
         }
       );
