@@ -465,7 +465,7 @@ const CustomerPage = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <button
-            className="bg-blue-500 text-white px-3 py-2 rounded-md flex items-center hover:bg-blue-600 transition flex-grow sm:flex-grow-0"
+            className="bg-blue-500 text-white px-3 py-2 rounded-md flex items-center hover:bg-blue-600 transition flex-grow sm:flex-grow-0 justify-center sm:justify-start"
             title="Import Customers"
             onClick={handleOpenImport}
           >
@@ -474,7 +474,7 @@ const CustomerPage = () => {
             <span className="sm:hidden">Import</span>
           </button>
           <button
-            className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md flex items-center hover:bg-gray-200 transition flex-grow sm:flex-grow-0"
+            className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md flex items-center hover:bg-gray-200 transition flex-grow sm:flex-grow-0 justify-center sm:justify-start"
             title="Refresh Customers"
             onClick={fetchCustomers}
           >
@@ -483,7 +483,7 @@ const CustomerPage = () => {
             <span className="sm:hidden">Refresh</span>
           </button>
           <button
-            className="bg-green-500 text-white px-3 py-2 rounded-md flex items-center hover:bg-green-600 transition flex-grow sm:flex-grow-0"
+            className="bg-green-500 text-white px-3 py-2 rounded-md flex items-center hover:bg-green-600 transition flex-grow sm:flex-grow-0 justify-center sm:justify-start"
             title="Export Customers to Excel"
             onClick={exportCustomers}
             disabled={loading}

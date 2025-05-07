@@ -758,11 +758,9 @@ const CustomerDetailPage = () => {
             </div>
           </div> */}
 
-          {/* Sales Trend - Actual vs Trend */}
+          {/* Sales Trend */}
           <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-            <h2 className="text-lg font-semibold mb-4">
-              Sales Trend (Actual vs Expected)
-            </h2>
+            <h2 className="text-lg font-semibold mb-4">Sales Trend</h2>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
@@ -810,9 +808,7 @@ const CustomerDetailPage = () => {
                   <Tooltip
                     content={({ active, payload, label }) => {
                       if (active && payload && payload.length) {
-                        const actual = payload.find(
-                          (p) => p.name === "Actual Sales"
-                        );
+                        const actual = payload.find((p) => p.name === "Sales");
                         if (!actual) return null;
 
                         return (
@@ -834,7 +830,7 @@ const CustomerDetailPage = () => {
                     stroke="#3b82f6"
                     activeDot={{ r: 8 }}
                     strokeWidth={2}
-                    name="Actual Sales"
+                    name="Sales"
                   />
                   <Line
                     type="monotone"

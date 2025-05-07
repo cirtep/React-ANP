@@ -24,6 +24,7 @@ import {
 
 const InventoryPage = () => {
   // State management
+  const [stockFilter, setStockFilter] = useState("all"); // "all", "low", or "critical"
   const [inventory, setInventory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -145,15 +146,31 @@ const InventoryPage = () => {
     fetchInventoryData();
   }, []);
 
+  // Reset filters when changing stock filter
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [stockFilter]);
+
   // Filtering and Search
   const filteredInventory = useMemo(() => {
     return inventory.filter((product) => {
-      // First filter by selected category if any
+      // First filter by stock status if selected
+      if (stockFilter === "low") {
+        if (!(product.qty <= product.min_stock)) {
+          return false;
+        }
+      } else if (stockFilter === "critical") {
+        if (!(product.qty <= product.min_stock / 2)) {
+          return false;
+        }
+      }
+
+      // Then filter by selected category if any
       if (selectedCategory && product.category !== selectedCategory) {
         return false;
       }
 
-      // Then filter by search term
+      // Finally filter by search term
       if (searchTerm) {
         return (
           product.product_name
@@ -171,7 +188,7 @@ const InventoryPage = () => {
 
       return true;
     });
-  }, [inventory, searchTerm, selectedCategory]);
+  }, [inventory, searchTerm, selectedCategory, stockFilter]);
 
   // Pagination
   const paginatedInventory = useMemo(() => {
@@ -360,6 +377,7 @@ const InventoryPage = () => {
             location: editProductData.location,
             qty: editProductData.qty,
             unit: editProductData.unit,
+            ppn: editProductData.ppn,
           }),
         }
       );
@@ -570,17 +588,22 @@ const InventoryPage = () => {
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Inventory</h1>
         </div>
-        <div className="flex items-center space-x-2">
-          <div className="relative" ref={importDropdownRef}>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div
+            className="relative flex-grow sm:flex-grow-0"
+            ref={importDropdownRef}
+          >
             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-blue-600 transition"
+              className="bg-blue-500 text-white px-3 py-2 rounded-md flex items-center hover:bg-blue-600 transition w-full justify-center sm:justify-start"
               onClick={() => setShowImportDropdown(!showImportDropdown)}
             >
-              <PlusCircle className="mr-2" size={18} /> Import
+              <Upload className="mr-2" size={18} />
+              <span className="hidden sm:inline">Import</span>
+              <span className="sm:hidden">Import</span>
               <ChevronDown className="ml-2" size={16} />
             </button>
 
@@ -609,27 +632,34 @@ const InventoryPage = () => {
           </div>
 
           <button
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center hover:bg-gray-200 transition"
+            className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md flex items-center hover:bg-gray-200 transition flex-grow sm:flex-grow-0 justify-center sm:justify-start"
             title="Refresh Inventory"
             onClick={fetchInventoryData}
           >
-            <RefreshCw className="mr-2" size={18} /> Refresh
+            <RefreshCw className="mr-2" size={18} />
+            <span className="hidden sm:inline">Refresh</span>
+            <span className="sm:hidden">Refresh</span>
           </button>
 
           <button
-            className="bg-green-500 text-white px-4 py-2 rounded-md flex items-center hover:bg-green-600 transition"
+            className="bg-green-500 text-white px-3 py-2 rounded-md flex items-center hover:bg-green-600 transition flex-grow sm:flex-grow-0 justify-center sm:justify-start"
             title="Export Inventory to Excel"
             onClick={exportInventory}
             disabled={loading}
           >
-            <Download className="mr-2" size={18} /> Export
+            <Download className="mr-2" size={18} />
+            <span className="hidden sm:inline">Export</span>
+            <span className="sm:hidden">Export</span>
           </button>
         </div>
       </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-center transition-all hover:shadow-md">
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-4 mb-6">
+        <div
+          className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-center transition-all hover:shadow-md relative group"
+          title="Total number of items in your inventory"
+        >
           <Box className="mr-4 text-blue-600" size={28} />
           <div>
             <p className="text-sm text-gray-600">Total Items</p>
@@ -638,7 +668,10 @@ const InventoryPage = () => {
             </p>
           </div>
         </div>
-        <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 flex items-center transition-all hover:shadow-md">
+        <div
+          className="bg-yellow-50 border border-yellow-100 rounded-lg p-4 flex items-center transition-all hover:shadow-md relative group"
+          title="Items with stock levels at or below the minimum stock level"
+        >
           <AlertTriangle className="mr-4 text-yellow-600" size={28} />
           <div>
             <p className="text-sm text-gray-600">Low Stock Items</p>
@@ -647,7 +680,10 @@ const InventoryPage = () => {
             </p>
           </div>
         </div>
-        <div className="bg-red-50 border border-red-100 rounded-lg p-4 flex items-center transition-all hover:shadow-md">
+        <div
+          className="bg-red-50 border border-red-100 rounded-lg p-4 flex items-center transition-all hover:shadow-md relative group"
+          title="Items with critically low stock (50% of minimum stock or lower)"
+        >
           <AlertCircle className="mr-4 text-red-600" size={28} />
           <div>
             <p className="text-sm text-gray-600">Critical Stock</p>
@@ -656,7 +692,10 @@ const InventoryPage = () => {
             </p>
           </div>
         </div>
-        <div className="bg-green-50 border border-green-100 rounded-lg p-4 flex items-center transition-all hover:shadow-md">
+        <div
+          className="bg-green-50 border border-green-100 rounded-lg p-4 flex items-center transition-all hover:shadow-md relative group"
+          title="Total value of all inventory items (qty × standard price)"
+        >
           <Tag className="mr-4 text-green-600" size={28} />
           <div>
             <p className="text-sm text-gray-600">Total Value</p>
@@ -672,12 +711,51 @@ const InventoryPage = () => {
         <div className="relative flex-grow mr-4">
           <input
             type="text"
-            placeholder="Search by product name, code, or category..."
+            placeholder="Search by product name, code, ID, or category..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <Search className="absolute left-3 top-2.5 text-gray-400" size={18} />
+        </div>
+
+        {/* Stock Status Filter */}
+        <div className="flex items-center bg-gray-100 rounded-md">
+          <button
+            className={`px-3 py-2 rounded-md text-sm flex items-center ${
+              stockFilter === "all"
+                ? "bg-white text-blue-600 shadow-sm"
+                : "text-gray-600 hover:bg-gray-200"
+            }`}
+            onClick={() => setStockFilter("all")}
+          >
+            <Package className="mr-1" size={16} />
+            All
+          </button>
+
+          <button
+            className={`px-3 py-2 rounded-md text-sm flex items-center ${
+              stockFilter === "low"
+                ? "bg-white text-yellow-600 shadow-sm"
+                : "text-gray-600 hover:bg-gray-200"
+            }`}
+            onClick={() => setStockFilter("low")}
+          >
+            <AlertTriangle className="mr-1" size={16} />
+            Low Stock
+          </button>
+
+          <button
+            className={`px-3 py-2 rounded-md text-sm flex items-center ${
+              stockFilter === "critical"
+                ? "bg-white text-red-600 shadow-sm"
+                : "text-gray-600 hover:bg-gray-200"
+            }`}
+            onClick={() => setStockFilter("critical")}
+          >
+            <AlertCircle className="mr-1" size={16} />
+            Critical
+          </button>
         </div>
 
         {/* Category filter dropdown */}
@@ -693,15 +771,6 @@ const InventoryPage = () => {
 
           {showCategoryDropdown && (
             <div className="absolute z-10 right-0 mt-1 w-56 bg-white rounded-md shadow-lg py-1 max-h-64 overflow-y-auto">
-              <div className="px-3 py-2 border-b border-gray-200">
-                <input
-                  type="text"
-                  placeholder="Search categories..."
-                  className="w-full px-2 py-1 border rounded-md text-sm"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-
               <button
                 className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 onClick={() => {
@@ -757,77 +826,112 @@ const InventoryPage = () => {
                 Price
               </th>
               <th className="p-3 text-center text-sm font-medium text-gray-500">
+                Status
+              </th>
+              <th className="p-3 text-center text-sm font-medium text-gray-500">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
             {paginatedInventory.length > 0 ? (
-              paginatedInventory.map((product) => (
-                <tr
-                  key={product.product_id}
-                  className={`border-t border-gray-200 hover:bg-gray-50 transition cursor-pointer ${
-                    product.qty <= product.min_stock ? "bg-red-50" : ""
-                  }`}
-                  onClick={() => goToProductDetail(product.product_id)}
-                >
-                  <td className="p-3 font-medium">{product.product_id}</td>
-                  <td className="p-3">{product.product_name}</td>
-                  <td className="p-3">{product.category || "-"}</td>
-                  <td
-                    className={`p-3 text-right font-medium ${
-                      product.qty <= product.min_stock ? "text-red-600" : ""
+              paginatedInventory.map((product) => {
+                // Determine stock status
+                let stockStatus = "normal";
+                let statusText = "Normal";
+                let statusColor = "bg-green-100 text-green-800";
+
+                if (product.qty <= product.min_stock / 2) {
+                  stockStatus = "critical";
+                  statusText = "Critical";
+                  statusColor = "bg-red-100 text-red-800";
+                } else if (product.qty <= product.min_stock) {
+                  stockStatus = "low";
+                  statusText = "Low Stock";
+                  statusColor = "bg-yellow-100 text-yellow-800";
+                }
+
+                return (
+                  <tr
+                    key={product.product_id}
+                    className={`border-t border-gray-200 hover:bg-gray-50 transition cursor-pointer ${
+                      stockStatus === "critical"
+                        ? "bg-red-50"
+                        : stockStatus === "low"
+                        ? "bg-yellow-50"
+                        : ""
                     }`}
+                    onClick={() => goToProductDetail(product.product_id)}
                   >
-                    {formatNumber(product.qty)}
-                  </td>
-                  <td className="p-3">{product.unit || "-"}</td>
-                  <td className="p-3 text-right">
-                    {formatCurrency(product.standard_price)}
-                  </td>
-                  <td
-                    className="p-3 text-center"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div className="flex space-x-2 justify-center">
-                      <button
-                        className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-blue-50"
-                        title="Edit Product"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenEdit(product);
-                        }}
+                    <td className="p-3 font-medium">{product.product_id}</td>
+                    <td className="p-3">{product.product_name}</td>
+                    <td className="p-3">{product.category || "-"}</td>
+                    <td
+                      className={`p-3 text-right font-medium ${
+                        stockStatus === "critical"
+                          ? "text-red-600"
+                          : stockStatus === "low"
+                          ? "text-yellow-600"
+                          : ""
+                      }`}
+                    >
+                      {formatNumber(product.qty)}
+                    </td>
+                    <td className="p-3">{product.unit || "-"}</td>
+                    <td className="p-3 text-right">
+                      {formatCurrency(product.standard_price)}
+                    </td>
+                    <td className="p-3 text-center">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs ${statusColor}`}
                       >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
-                        title="Delete Product"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          confirmDelete(product);
-                        }}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                      <button
-                        className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-50"
-                        title="View Details"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          goToProductDetail(product.product_id);
-                        }}
-                      >
-                        <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                        {statusText}
+                      </span>
+                    </td>
+                    <td
+                      className="p-3 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <div className="flex space-x-2 justify-center">
+                        <button
+                          className="text-blue-500 hover:text-blue-700 p-1 rounded-full hover:bg-blue-50"
+                          title="Edit Product"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEdit(product);
+                          }}
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50"
+                          title="Delete Product"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDelete(product);
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <button
+                          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-50"
+                          title="View Details"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            goToProductDetail(product.product_id);
+                          }}
+                        >
+                          <ChevronRight size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan="7" className="p-8 text-center text-gray-500">
-                  {searchTerm || selectedCategory ? (
+                <td colSpan="8" className="p-8 text-center text-gray-500">
+                  {searchTerm || selectedCategory || stockFilter !== "all" ? (
                     <div>
                       <p className="mb-2">
                         No products match your search criteria.
@@ -837,6 +941,7 @@ const InventoryPage = () => {
                         onClick={() => {
                           setSearchTerm("");
                           setSelectedCategory("");
+                          setStockFilter("all");
                         }}
                       >
                         Clear filters
@@ -1108,7 +1213,13 @@ const InventoryPage = () => {
                     value={editProductData.category || ""}
                     onChange={handleEditInputChange}
                     className="w-full p-2 border rounded-md"
+                    list="categories"
                   />
+                  <datalist id="categories">
+                    {availableCategories.map((cat) => (
+                      <option key={cat} value={cat} />
+                    ))}
+                  </datalist>
                 </div>
 
                 {/* Standard Price */}
@@ -1230,6 +1341,21 @@ const InventoryPage = () => {
                   />
                 </div>
 
+                {/* Supplier ID */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Supplier ID
+                  </label>
+                  <input
+                    type="text"
+                    name="supplier_id"
+                    value={editProductData.supplier_id || ""}
+                    onChange={handleEditInputChange}
+                    className="w-full p-2 border rounded-md"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 mb-4">
                 {/* Location */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1244,7 +1370,37 @@ const InventoryPage = () => {
                   />
                 </div>
               </div>
-
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">
+                  Use Forecast for Min/Max Stock
+                  <span className="ml-2 text-xs text-gray-500">
+                    (Uses forecast lower/upper bounds instead of fixed values)
+                  </span>
+                </label>
+                <div className="relative inline-block w-12 mr-2 align-middle select-none">
+                  <input
+                    type="checkbox"
+                    name="use_forecast"
+                    id="use_forecast"
+                    checked={editProductData.use_forecast || false}
+                    onChange={(e) => {
+                      setEditProductData((prev) => ({
+                        ...prev,
+                        use_forecast: e.target.checked,
+                      }));
+                    }}
+                    className="absolute block w-6 h-6 bg-white border-4 rounded-full appearance-none cursor-pointer checked:right-0 checked:border-blue-500 focus:outline-none"
+                  />
+                  <label
+                    htmlFor="use_forecast"
+                    className={`block h-6 overflow-hidden rounded-full cursor-pointer ${
+                      editProductData.use_forecast
+                        ? "bg-blue-300"
+                        : "bg-gray-300"
+                    }`}
+                  ></label>
+                </div>
+              </div>
               <div className="flex justify-end mt-4 space-x-3">
                 <button
                   type="button"
@@ -1302,7 +1458,7 @@ const InventoryPage = () => {
 
             <div className="mb-4">
               <p className="text-gray-600 mb-2">
-                Upload a CSV, XLS, or XLSX file containing{" "}
+                Upload a XLSX file containing{" "}
                 {importType === "product" ? "product" : "product stock"} data.
               </p>
               <p className="text-sm text-gray-500 mb-4">
@@ -1336,7 +1492,7 @@ const InventoryPage = () => {
                       Click to select or drag and drop
                     </p>
                     <p className="mt-1 text-xs text-gray-500">
-                      CSV, XLS, XLSX up to 10MB
+                      XLSX up to 10MB
                     </p>
                   </div>
                 )}
