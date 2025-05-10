@@ -635,16 +635,16 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
 
   // Parameter description mapping
   const parameterDescriptions = {
-    changepoint_prior_scale:
-      "Controls flexibility in the trend (how much it can change). Lower values create smoother trends.",
-    seasonality_prior_scale:
-      "Controls flexibility of the seasonality. Higher values allow more fluctuation in seasonal patterns.",
-    holidays_prior_scale:
-      "Controls flexibility of holiday effects. Higher values make holidays more pronounced.",
-    seasonality_mode:
-      "Additive for constant seasonality patterns; multiplicative when seasonality changes with trend level.",
-    changepoint_range:
-      "Proportion of the history where trend changes can occur. Value of 0.9 means changepoints only in first 90% of the data.",
+    // changepoint_prior_scale:
+    //   "Controls flexibility in the trend (how much it can change). Lower values create smoother trends.",
+    // seasonality_prior_scale:
+    //   "Controls flexibility of the seasonality. Higher values allow more fluctuation in seasonal patterns.",
+    // holidays_prior_scale:
+    //   "Controls flexibility of holiday effects. Higher values make holidays more pronounced.",
+    // seasonality_mode:
+    //   "Additive for constant seasonality patterns; multiplicative when seasonality changes with trend level.",
+    // changepoint_range:
+    //   "Proportion of the history where trend changes can occur. Value of 0.9 means changepoints only in first 90% of the data.",
   };
 
   // Format date for display
@@ -687,7 +687,7 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
     <div>
       <div className="mb-6">
         <h2 className="text-lg font-medium text-gray-700 mb-2">
-          Forecast Parameter Tuning
+          Parameter Tuning
         </h2>
         <p className="text-gray-600">
           Optimize your forecasting model by fine-tuning Prophet algorithm
@@ -750,9 +750,7 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
       )}
 
       <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-6">
-        <h3 className="font-semibold text-gray-800 mb-4">
-          Grid Search Configuration
-        </h3>
+        <h3 className="font-semibold text-gray-800 mb-4">Configuration</h3>
 
         {/* Category Selection */}
         <div className="mb-6">
@@ -810,9 +808,9 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
         {/* Grid Search Values */}
         {selectedParameters.length > 0 && (
           <div className="mb-6 border rounded-md p-4 bg-gray-50">
-            <h4 className="font-medium text-gray-800 mb-3">
+            {/* <h4 className="font-medium text-gray-800 mb-3">
               Grid Search Values
-            </h4>
+            </h4> */}
             <p className="text-sm text-gray-600 mb-4">
               Select multiple values to test for each parameter. The system will
               evaluate all combinations to find the optimal configuration.

@@ -638,7 +638,7 @@ const CustomerDetailPage = () => {
             }`}
             onClick={() => setActiveTab("profile")}
           >
-            Complete Profile
+            Customer Profile
           </button>
         </nav>
       </div>

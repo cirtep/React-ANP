@@ -29,6 +29,9 @@ import {
   Calendar as CalendarIcon,
   Percent,
   ShoppingCart,
+  CheckCircle,
+  Info,
+  XCircle,
 } from "lucide-react";
 import {
   LineChart,
@@ -65,6 +68,13 @@ const InventoryDetailPage = () => {
   const [error, setError] = useState(null);
   const [timeRange, setTimeRange] = useState("all"); // Default: "all" (changed from 12 months)
   const [activeTab, setActiveTab] = useState("overview"); // "overview", "sales", "customers", "predictions"
+
+  useEffect(() => {
+    // Automatically set timeRange to "all" when entering the Inventory Metrics tab
+    if (activeTab === "inventory") {
+      setTimeRange("all");
+    }
+  }, [activeTab]);
 
   // Fetch product details and sales data
   useEffect(() => {
@@ -200,8 +210,11 @@ const InventoryDetailPage = () => {
       }
     }
 
-    return { velocity: velocity, trend: trend };
+    return { velocity: Math.floor(velocity), trend: trend };
   };
+
+  // Calculate stock turnover rate (how many times the inventory turns over in a year)
+  // First, let's fix the calculateStockTurnover and calculateDaysInventory functions:
 
   // Calculate stock turnover rate (how many times the inventory turns over in a year)
   const calculateStockTurnover = () => {
@@ -209,10 +222,31 @@ const InventoryDetailPage = () => {
       return 0;
     }
 
-    // Annual sales quantity / average inventory level
-    const annualSalesQty = (salesData.total_qty / timeRange) * 12;
-    const turnoverRate = annualSalesQty / product.qty;
+    // For "all" time range, calculate annualized sales using 12-month data or total months
+    let annualSalesQty;
+    if (timeRange === "all") {
+      // If we have sales_by_month data, determine the actual time span in months
+      if (salesData.sales_by_month && salesData.sales_by_month.length > 0) {
+        const monthCount = salesData.sales_by_month.length;
+        // If we have enough months to make a good calculation
+        if (monthCount > 0) {
+          // Annualize by converting total sales to a yearly equivalent
+          annualSalesQty = (salesData.total_qty / monthCount) * 12;
+        } else {
+          // Fallback if month count is invalid
+          annualSalesQty = salesData.total_qty;
+        }
+      } else {
+        // If no monthly data, use total_qty directly (assuming it's annual already)
+        annualSalesQty = salesData.total_qty;
+      }
+    } else {
+      // For specific time ranges (3, 6, 12 months)
+      const months = parseInt(timeRange);
+      annualSalesQty = (salesData.total_qty / months) * 12;
+    }
 
+    const turnoverRate = annualSalesQty / product.qty;
     return turnoverRate;
   };
 
@@ -403,47 +437,47 @@ const InventoryDetailPage = () => {
   };
 
   // Generate radar chart data for key performance metrics
-  const generateRadarData = () => {
-    if (!salesData) return [];
+  // const generateRadarData = () => {
+  //   if (!salesData) return [];
 
-    const turnoverRate = calculateStockTurnover();
-    const daysInventory = calculateDaysInventory();
-    const { velocity, trend } = calculateSalesVelocity();
+  //   const turnoverRate = calculateStockTurnover();
+  //   const daysInventory = calculateDaysInventory();
+  //   const { velocity, trend } = calculateSalesVelocity();
 
-    // Create normalized values on a scale of 0-100
-    return [
-      {
-        subject: "Sales Volume",
-        A: Math.min(Math.max((salesData.total_qty || 0) / 100, 0), 100),
-        fullMark: 100,
-      },
-      {
-        subject: "Revenue",
-        A: Math.min(Math.max((salesData.total_sales || 0) / 10000000, 0), 100),
-        fullMark: 100,
-      },
-      {
-        subject: "Profit Margin",
-        A: Math.min(Math.max(salesData.profit_margin || 0, 0), 100),
-        fullMark: 100,
-      },
-      {
-        subject: "Turnover Rate",
-        A: Math.min(Math.max(turnoverRate * 10, 0), 100),
-        fullMark: 100,
-      },
-      {
-        subject: "Sales Velocity",
-        A: Math.min(Math.max(velocity * 2, 0), 100),
-        fullMark: 100,
-      },
-      {
-        subject: "Growth Trend",
-        A: Math.min(Math.max(trend + 50, 0), 100), // Normalize -50% to +50% → 0 to 100
-        fullMark: 100,
-      },
-    ];
-  };
+  //   // Create normalized values on a scale of 0-100
+  //   return [
+  //     {
+  //       subject: "Sales Volume",
+  //       A: Math.min(Math.max((salesData.total_qty || 0) / 100, 0), 100),
+  //       fullMark: 100,
+  //     },
+  //     {
+  //       subject: "Revenue",
+  //       A: Math.min(Math.max((salesData.total_sales || 0) / 10000000, 0), 100),
+  //       fullMark: 100,
+  //     },
+  //     {
+  //       subject: "Profit Margin",
+  //       A: Math.min(Math.max(salesData.profit_margin || 0, 0), 100),
+  //       fullMark: 100,
+  //     },
+  //     {
+  //       subject: "Turnover Rate",
+  //       A: Math.min(Math.max(turnoverRate * 10, 0), 100),
+  //       fullMark: 100,
+  //     },
+  //     {
+  //       subject: "Sales Velocity",
+  //       A: Math.min(Math.max(velocity * 2, 0), 100),
+  //       fullMark: 100,
+  //     },
+  //     {
+  //       subject: "Growth Trend",
+  //       A: Math.min(Math.max(trend + 50, 0), 100), // Normalize -50% to +50% → 0 to 100
+  //       fullMark: 100,
+  //     },
+  //   ];
+  // };
 
   // Render loading state
   if (loading) {
@@ -610,12 +644,12 @@ const InventoryDetailPage = () => {
               <div className="rounded-full bg-blue-100 p-2 mr-3">
                 <Package size={16} className="text-blue-600" />
               </div>
-              <div>
+              {/* <div>
                 <p className="text-sm text-gray-500">Location</p>
                 <p className="font-medium">
                   {product?.location || "Not specified"}
                 </p>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -625,12 +659,12 @@ const InventoryDetailPage = () => {
 
   // Calculate additional metrics
   const { velocity, trend } = calculateSalesVelocity();
-  const turnoverRate = calculateStockTurnover();
+  // const turnoverRate = calculateStockTurnover();
   const daysInventory = calculateDaysInventory();
   const quarterlySales = prepareQuarterlySales();
   const profitabilityData = prepareProfitabilityData();
   const seasonalPattern = calculateSeasonalPattern();
-  const radarData = generateRadarData();
+  // const radarData = generateRadarData();
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
@@ -706,7 +740,7 @@ const InventoryDetailPage = () => {
             }`}
             onClick={() => setActiveTab("inventory")}
           >
-            Inventory Metrics
+            Product Profile
           </button>
         </nav>
       </div>
@@ -723,6 +757,11 @@ const InventoryDetailPage = () => {
                   : "text-gray-600 hover:bg-gray-200"
               }`}
               onClick={() => setTimeRange(months)}
+              disabled={activeTab === "inventory"} // Disable when on inventory tab
+              style={{
+                opacity:
+                  activeTab === "inventory" && months !== "all" ? 0.5 : 1,
+              }}
             >
               {months === "all" ? "All Time" : `${months} Months`}
             </button>
@@ -1573,11 +1612,14 @@ const InventoryDetailPage = () => {
                             <div className="text-blue-600 mb-1">
                               Sales: {formatCurrency(payload[0].value)}
                             </div>
-                            <div className="text-gray-700">
+                            <div className="text-gray-700 mb-1">
                               Orders:{" "}
                               {formatNumber(
                                 payload[0].payload.order_count || 0
                               )}
+                            </div>
+                            <div className="text-gray-700">
+                              Qty: {formatNumber(payload[0].payload.qty || 0)}
                             </div>
                           </div>
                         );
@@ -1914,7 +1956,10 @@ const InventoryDetailPage = () => {
         <>
           {/* Key Inventory Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-blue-50 rounded-md p-4 border border-blue-100">
+            <div
+              className="bg-blue-50 rounded-md p-4 border border-blue-100 relative group"
+              title="Current inventory quantity available in stock"
+            >
               <div className="flex items-center">
                 <div className="rounded-full bg-blue-100 p-2 mr-3">
                   <Clipboard size={18} className="text-blue-600" />
@@ -1938,8 +1983,13 @@ const InventoryDetailPage = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-green-50 rounded-md p-4 border border-green-100">
-              <div className="flex items-center">
+            {/* <div className="bg-green-50 rounded-md p-4 border border-green-100 relative group">
+              <div
+                className="flex items-center"
+                title="How many times your inventory is sold and replaced during a
+                year. Higher values indicate more efficient inventory
+                management."
+              >
                 <div className="rounded-full bg-green-100 p-2 mr-3">
                   <RefreshCw size={18} className="text-green-600" />
                 </div>
@@ -1959,9 +2009,13 @@ const InventoryDetailPage = () => {
                   </p>
                 </div>
               </div>
-            </div>
-            <div className="bg-yellow-50 rounded-md p-4 border border-yellow-100">
-              <div className="flex items-center">
+            </div> */}
+            <div className="bg-yellow-50 rounded-md p-4 border border-yellow-100 relative group">
+              <div
+                className="flex items-center"
+                title="Average number of days it takes to sell through current
+                inventory. Lower values indicate faster-moving products."
+              >
                 <div className="rounded-full bg-yellow-100 p-2 mr-3">
                   <Clock size={18} className="text-yellow-600" />
                 </div>
@@ -1971,198 +2025,578 @@ const InventoryDetailPage = () => {
                     {daysInventory}{" "}
                     <span className="text-xs text-gray-500">days</span>
                   </p>
+                  {/* <p className="text-xs text-gray-600">
+                    {daysInventory < 30
+                      ? "Fast-moving"
+                      : daysInventory < 90
+                      ? "Normal"
+                      : "Slow-moving"}
+                  </p> */}
+                </div>
+              </div>
+            </div>
+            <div className="bg-purple-50 rounded-md p-4 border border-purple-100 relative group">
+              <div
+                className="flex items-center"
+                title={`Recommended minimum and maximum stock levels.${
+                  product?.use_forecast ? " Based on sales forecast data." : ""
+                }`}
+              >
+                <div className="rounded-full bg-purple-100 p-2 mr-3">
+                  <Target size={18} className="text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Stock Levels</p>
+                  <p className="text-xl font-semibold">
+                    <span
+                      className={
+                        product?.qty <= product?.min_stock ? "text-red-600" : ""
+                      }
+                    >
+                      {formatNumber(product?.min_stock)} -{" "}
+                      {formatNumber(product?.max_stock)}
+                    </span>
+                  </p>
                   <p className="text-xs text-gray-600">
-                    Avg. days to sell current stock
+                    Min-Max targets{" "}
+                    {product?.use_forecast ? "(using forecast)" : ""}
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Inventory Value */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center">
-              <DollarSign size={18} className="mr-2 text-gray-500" />
-              Inventory Value Analysis
+          {/* Stock Levels & Forecasting */}
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+              <Target className="mr-2 text-gray-700" size={20} />
+              Stock Levels & Forecasting
             </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-medium text-gray-800 mb-3">
-                  Current Inventory Value
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+              {/* Stock Level Settings */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h3 className="font-medium text-gray-700 mb-4 flex items-center">
+                  <AlertTriangle className="mr-2 text-amber-500" size={18} />
+                  Stock Level Settings
                 </h3>
-                <div className="flex items-center justify-between">
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500">Value at Cost</p>
-                    <p className="text-xl font-semibold text-gray-800">
-                      {formatCurrency(
-                        product?.qty * (product?.standard_price || 0)
-                      )}
+                    <p className="text-sm text-gray-500 mb-1">Current Stock:</p>
+                    <p className="text-lg font-semibold">
+                      {formatNumber(product?.qty)} {product?.unit}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500">Value at Retail</p>
-                    <p className="text-xl font-semibold text-gray-800">
-                      {formatCurrency(
-                        product?.qty * (product?.retail_price || 0)
-                      )}
+                    {/* <p className="text-sm text-gray-500 mb-1">Location:</p>
+                    <p className="text-lg font-semibold">
+                      {product?.location || "Not specified"}
+                    </p> */}
+                  </div>
+
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">
+                      Minimum Stock Level:
                     </p>
+                    <div className="flex items-center">
+                      <p className="text-lg font-semibold">
+                        {formatNumber(product?.min_stock)} {product?.unit}
+                      </p>
+                      {product?.use_forecast && (
+                        <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                          Forecast
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">
+                      Maximum Stock Level:
+                    </p>
+                    <div className="flex items-center">
+                      <p className="text-lg font-semibold">
+                        {formatNumber(product?.max_stock)} {product?.unit}
+                      </p>
+                      {product?.use_forecast && (
+                        <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                          Forecast
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <p className="text-sm text-gray-600 mb-2">
+                    Forecast Based Limits:
+                  </p>
+                  <div className="flex items-center">
+                    {product?.use_forecast ? (
+                      <>
+                        <div className="rounded-full bg-green-100 p-1 mr-2">
+                          <CheckCircle size={16} className="text-green-600" />
+                        </div>
+                        <p className="text-sm">
+                          Using forecast data for min/max stock levels
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="rounded-full bg-gray-100 p-1 mr-2">
+                          <XCircle size={16} className="text-gray-400" />
+                        </div>
+                        <p className="text-sm">
+                          Using fixed min/max stock levels
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-medium text-gray-800 mb-3">
-                  Inventory Metrics
+              {/* Stock Status */}
+              <div className="bg-gray-50 rounded-lg p-5 border border-gray-200">
+                <h3 className="font-medium text-gray-700 mb-4 flex items-center">
+                  <Package className="mr-2 text-indigo-600" size={18} />
+                  Stock Status
                 </h3>
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">
-                      Cost per Unit:
-                    </span>
-                    <span className="font-medium">
-                      {formatCurrency(product?.standard_price)}
+
+                {/* Current stock display */}
+                <div className="flex justify-between items-center mb-6">
+                  <span className="text-sm text-gray-600">Current Stock:</span>
+                  <span className="text-xl font-bold">
+                    {formatNumber(product?.qty)} {product?.unit}
+                  </span>
+                </div>
+
+                {/* New Stock Level Gauge */}
+                <div className="mb-6">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600">Stock Level</span>
+                    <span
+                      className={`font-medium ${
+                        product?.qty < product?.min_stock
+                          ? "text-red-600"
+                          : product?.qty > product?.max_stock
+                          ? "text-blue-600"
+                          : "text-green-600"
+                      }`}
+                    >
+                      {product?.qty < product?.min_stock
+                        ? "Low"
+                        : product?.qty > product?.max_stock
+                        ? "Excess"
+                        : "Optimal"}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">
-                      Retail per Unit:
-                    </span>
-                    <span className="font-medium">
-                      {formatCurrency(product?.retail_price)}
-                    </span>
+
+                  {/* Stock gauge with clear min/max markers */}
+                  <div className="relative pt-6 pb-3">
+                    {/* Min marker */}
+                    <div
+                      className="absolute top-0 text-xs text-gray-500"
+                      style={{
+                        left: `${Math.min(
+                          100,
+                          Math.max(
+                            0,
+                            (product?.min_stock /
+                              Math.max(product?.max_stock * 1.2, 1)) *
+                              100
+                          )
+                        )}%`,
+                        transform: "translateX(-50%)",
+                      }}
+                    >
+                      Min
+                    </div>
+
+                    {/* Max marker */}
+                    <div
+                      className="absolute top-0 text-xs text-gray-500"
+                      style={{
+                        left: `${Math.min(
+                          95,
+                          Math.max(
+                            0,
+                            (product?.max_stock /
+                              Math.max(product?.max_stock * 1.2, 1)) *
+                              100
+                          )
+                        )}%`,
+                        transform: "translateX(-50%)",
+                      }}
+                    >
+                      Max
+                    </div>
+
+                    {/* Progress bar background with gradient */}
+                    <div className="h-3 w-full bg-gradient-to-r from-red-200 via-green-200 to-blue-200 rounded-full">
+                      {/* Min and Max markers */}
+                      <div className="relative h-full w-full">
+                        <div
+                          className="absolute h-5 border-l-2 border-gray-600 top-1/2 transform -translate-y-1/2"
+                          style={{
+                            left: `${Math.min(
+                              100,
+                              Math.max(
+                                0,
+                                (product?.min_stock /
+                                  Math.max(product?.max_stock * 1.2, 1)) *
+                                  100
+                              )
+                            )}%`,
+                          }}
+                        ></div>
+                        <div
+                          className="absolute h-5 border-l-2 border-gray-600 top-1/2 transform -translate-y-1/2"
+                          style={{
+                            left: `${Math.min(
+                              95,
+                              Math.max(
+                                0,
+                                (product?.max_stock /
+                                  Math.max(product?.max_stock * 1.2, 1)) *
+                                  100
+                              )
+                            )}%`,
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Stock indicator dot */}
+                    <div
+                      className="absolute h-7 w-7 rounded-full bg-white border-4 border-indigo-600 -mt-5"
+                      style={{
+                        left: `${Math.min(
+                          98,
+                          Math.max(
+                            2,
+                            (product?.qty /
+                              Math.max(product?.max_stock * 1.2, 1)) *
+                              100
+                          )
+                        )}%`,
+                        top: "50%",
+                        transform: "translateX(-50%)",
+                      }}
+                    ></div>
+
+                    {/* Scale labels */}
+                    <div className="flex justify-between text-xs text-gray-400 mt-1">
+                      <span>0</span>
+                      <span>
+                        {formatNumber(
+                          Math.max(product?.max_stock * 1.2, product?.qty * 1.2)
+                        )}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-500">Gross Margin:</span>
-                    <span className="font-medium">
-                      {product?.retail_price && product?.standard_price
-                        ? `${(
-                            ((product.retail_price - product.standard_price) /
-                              product.retail_price) *
-                            100
-                          ).toFixed(1)}%`
-                        : "N/A"}
-                    </span>
-                  </div>
+                </div>
+
+                {/* Status Assessment */}
+                <div
+                  className={`p-4 rounded-lg ${
+                    product?.qty < product?.min_stock
+                      ? "bg-red-50 border border-red-100"
+                      : product?.qty > product?.max_stock
+                      ? "bg-blue-50 border border-blue-100"
+                      : "bg-green-50 border border-green-100"
+                  }`}
+                >
+                  {product?.qty < product?.min_stock ? (
+                    <>
+                      <h4 className="font-medium flex items-center text-red-700 mb-2">
+                        <AlertTriangle size={18} className="mr-2" />
+                        Low Stock Alert
+                      </h4>
+                      <p className="text-sm text-gray-700">
+                        Current stock ({formatNumber(product?.qty)}{" "}
+                        {product?.unit}) is below minimum level (
+                        {formatNumber(product?.min_stock)} {product?.unit}).
+                        {/* <span className="block mt-1 font-medium">
+                          Recommended action: Order more stock soon.
+                        </span> */}
+                      </p>
+                    </>
+                  ) : product?.qty > product?.max_stock ? (
+                    <>
+                      <h4 className="font-medium flex items-center text-blue-700 mb-2">
+                        <Info size={18} className="mr-2" />
+                        Excess Stock Notice
+                      </h4>
+                      <p className="text-sm text-gray-700">
+                        Current stock ({formatNumber(product?.qty)}{" "}
+                        {product?.unit}) exceeds maximum level (
+                        {formatNumber(product?.max_stock)} {product?.unit}).
+                        {/* <span className="block mt-1 font-medium">
+                          Recommended action: Consider promotional activities.
+                        </span> */}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <h4 className="font-medium flex items-center text-green-700 mb-2">
+                        <CheckCircle size={18} className="mr-2" />
+                        Optimal Stock Level
+                      </h4>
+                      <p className="text-sm text-gray-700">
+                        Current stock ({formatNumber(product?.qty)}{" "}
+                        {product?.unit}) is within the optimal range.
+                        {/* <span className="block mt-1 font-medium">
+                          No action needed at this time.
+                        </span> */}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div className="mt-6">
-              <h3 className="font-medium text-gray-800 mb-3">
-                Recommended Stock Levels
+            {/* Reorder Recommendations */}
+            {/* <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+              <h3 className="font-medium text-gray-700 mb-2 flex items-center">
+                <ShoppingCart className="mr-2 text-blue-600" size={18} />
+                Reorder Recommendations
               </h3>
-              <div className="bg-gray-50 rounded-lg overflow-hidden">
-                <div className="flex h-8 w-full">
-                  <div
-                    className="bg-red-400 h-full flex items-center justify-center text-xs text-white font-medium"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (product?.min_stock / product?.max_stock) * 100
-                      )}%`,
-                    }}
-                  >
-                    Low
-                  </div>
-                  <div
-                    className="bg-yellow-400 h-full flex items-center justify-center text-xs text-white font-medium"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        ((product?.max_stock * 0.6 - product?.min_stock) /
-                          product?.max_stock) *
-                          100
-                      )}%`,
-                    }}
-                  >
-                    Medium
-                  </div>
-                  <div
-                    className="bg-green-400 h-full flex items-center justify-center text-xs text-white font-medium"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        ((product?.max_stock - product?.max_stock * 0.6) /
-                          product?.max_stock) *
-                          100
-                      )}%`,
-                    }}
-                  >
-                    Optimal
-                  </div>
-                </div>
-                <div className="relative h-4 bg-gray-200 w-full mt-1">
-                  <div
-                    className={`absolute top-0 h-full ${
-                      product?.qty <= product?.min_stock
-                        ? "bg-red-500"
-                        : product?.qty <= product?.max_stock * 0.6
-                        ? "bg-yellow-500"
-                        : "bg-green-500"
-                    }`}
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (product?.qty / product?.max_stock) * 100
-                      )}%`,
-                    }}
-                  ></div>
-                  <div
-                    className="absolute top-0 h-full border-r-2 border-black"
-                    style={{
-                      left: `${Math.min(
-                        100,
-                        (product?.min_stock / product?.max_stock) * 100
-                      )}%`,
-                    }}
-                  ></div>
-                  <div
-                    className="absolute top-0 h-full border-r-2 border-black"
-                    style={{
-                      left: `${Math.min(
-                        100,
-                        ((product?.max_stock * 0.6) / product?.max_stock) * 100
-                      )}%`,
-                    }}
-                  ></div>
-                </div>
-                <div className="flex justify-between text-xs text-gray-500 mt-1 px-1">
-                  <span>0</span>
-                  <span>{product?.min_stock}</span>
-                  <span>{Math.round(product?.max_stock * 0.6)}</span>
-                  <span>{product?.max_stock}</span>
-                </div>
-              </div>
-              <div className="flex items-center mt-3">
-                <div
-                  className={`w-3 h-3 rounded-full mr-1 ${
-                    product?.qty <= product?.min_stock
-                      ? "bg-red-500"
-                      : product?.qty <= product?.max_stock * 0.6
-                      ? "bg-yellow-500"
-                      : "bg-green-500"
-                  }`}
-                ></div>
+
+              {product?.qty <= product?.min_stock ? (
                 <p className="text-sm">
-                  Current stock level:{" "}
-                  <strong>
-                    {product?.qty} {product?.unit}
-                  </strong>{" "}
-                  (
-                  {product?.qty <= product?.min_stock
-                    ? "Below minimum"
-                    : product?.qty <= product?.max_stock * 0.6
+                  Reorder recommended. Current stock (
+                  {formatNumber(product?.qty)} {product?.unit}) is below the
+                  minimum threshold ({formatNumber(product?.min_stock)}{" "}
+                  {product?.unit}).
+                </p>
+              ) : (
+                <p className="text-sm">
+                  No reorder needed at this time. Current stock (
+                  {formatNumber(product?.qty)} {product?.unit}) is above the
+                  minimum threshold ({formatNumber(product?.min_stock)}{" "}
+                  {product?.unit}).
+                </p>
+              )}
+            </div> */}
+          </div>
+
+          {/* Additional Metrics */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <BarChart2 size={18} className="mr-2 text-gray-500" />
+              Inventory Performance Metrics
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div
+                className="bg-gray-50 rounded-lg p-4 relative group"
+                title="The average number of units sold per month and trend compared
+                  to previous periods"
+              >
+                <h3 className="font-medium text-gray-800 mb-2 flex items-center">
+                  <Activity size={16} className="mr-2 text-blue-500" />
+                  Sales Velocity
+                </h3>
+                <p className="text-xl font-semibold">
+                  {formatNumber(velocity)} units/month
+                </p>
+                <p className="text-sm text-gray-600">
+                  {trend >= 0 ? (
+                    <span className="text-green-600">
+                      ↑ {trend.toFixed(1)}% increasing
+                    </span>
+                  ) : (
+                    <span className="text-red-600">
+                      ↓ {Math.abs(trend).toFixed(1)}% decreasing
+                    </span>
+                  )}
+                </p>
+              </div>
+
+              <div
+                className="bg-gray-50 rounded-lg p-4 relative group"
+                title="How long current stock will last at the current rate of sales"
+              >
+                <h3 className="font-medium text-gray-800 mb-2 flex items-center">
+                  <AlertCircle size={16} className="mr-2 text-yellow-500" />
+                  Stock Coverage
+                </h3>
+                <p className="text-xl font-semibold">{daysInventory} days</p>
+                {/* <p className="text-sm text-gray-600">
+                  {daysInventory < 30
+                    ? "Very short"
+                    : daysInventory < 60
+                    ? "Short"
+                    : daysInventory < 90
                     ? "Adequate"
-                    : "Optimal"}
-                  )
+                    : daysInventory < 180
+                    ? "Long"
+                    : "Very long"}{" "}
+                  coverage
+                </p> */}
+              </div>
+
+              <div
+                className="bg-gray-50 rounded-lg p-4 relative group"
+                title="Lifetime total quantity sold and revenue"
+              >
+                <h3 className="font-medium text-gray-800 mb-2 flex items-center">
+                  <PieChartIcon size={16} className="mr-2 text-purple-500" />
+                  Total Sales
+                </h3>
+                <p className="text-xl font-semibold">
+                  {formatNumber(salesData?.total_qty || 0)} {product?.unit}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {formatCurrency(salesData?.total_sales || 0)} revenue
                 </p>
               </div>
             </div>
           </div>
 
+          {/* Product Information */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 mt-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <Package size={18} className="mr-2 text-gray-500" />
+              Product Details
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-gray-800 mb-3">
+                  Basic Information
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Product ID:</span>
+                    <span className="font-medium">{product?.product_id}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Product Code:</span>
+                    <span className="font-medium">
+                      {product?.product_code || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Category:</span>
+                    <span className="font-medium">
+                      {product?.category || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Unit:</span>
+                    <span className="font-medium">
+                      {product?.unit || "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-medium text-gray-800 mb-3">
+                  Price Information
+                </h3>
+                <div className="space-y-3">
+                  {/* Calculate Average Sales Price from sales_by_month data */}
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">
+                      Average Sales Price:
+                    </span>
+                    <span className="font-medium text-blue-700">
+                      {(() => {
+                        if (
+                          !salesData?.sales_by_month ||
+                          salesData.sales_by_month.length === 0
+                        ) {
+                          return formatCurrency(product?.standard_price || 0);
+                        }
+
+                        const totalAmount = salesData.sales_by_month.reduce(
+                          (sum, month) => sum + month.amount,
+                          0
+                        );
+                        const totalQty = salesData.sales_by_month.reduce(
+                          (sum, month) => sum + month.qty,
+                          0
+                        );
+
+                        return totalQty > 0
+                          ? formatCurrency(Math.floor(totalAmount / totalQty))
+                          : formatCurrency(product?.standard_price || 0);
+                      })()}
+                    </span>
+                  </div>
+
+                  {/* Calculate Average Cost from cost_by_month data */}
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">Average Cost:</span>
+                    <span className="font-medium text-red-700">
+                      {(() => {
+                        if (
+                          !salesData?.cost_by_month ||
+                          salesData.cost_by_month.length === 0
+                        ) {
+                          return "N/A";
+                        }
+
+                        const totalCost = salesData.cost_by_month.reduce(
+                          (sum, month) => sum + month.amount,
+                          0
+                        );
+                        const totalQty = salesData.cost_by_month.reduce(
+                          (sum, month) => sum + month.qty,
+                          0
+                        );
+
+                        return totalQty > 0
+                          ? formatCurrency(Math.floor(totalCost / totalQty))
+                          : "N/A";
+                      })()}
+                    </span>
+                  </div>
+
+                  {/* Calculate Profit Margin if both price and cost are available */}
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-500">
+                      Profit Margin:
+                    </span>
+                    <span className="font-medium text-green-700">
+                      {(() => {
+                        if (
+                          !salesData?.sales_by_month ||
+                          !salesData?.cost_by_month ||
+                          salesData.sales_by_month.length === 0 ||
+                          salesData.cost_by_month.length === 0
+                        ) {
+                          return "N/A";
+                        }
+
+                        const totalSales = salesData.sales_by_month.reduce(
+                          (sum, month) => sum + month.amount,
+                          0
+                        );
+                        const totalCost = salesData.cost_by_month.reduce(
+                          (sum, month) => sum + month.amount,
+                          0
+                        );
+
+                        if (totalSales > 0 && totalCost > 0) {
+                          const margin =
+                            ((totalSales - totalCost) / totalSales) * 100;
+                          return `${margin.toFixed(1)}%`;
+                        }
+
+                        return "N/A";
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Stock Management Recommendations */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          {/* <div className="bg-white rounded-lg border border-gray-200 p-4 mt-6">
             <h2 className="text-lg font-semibold mb-4 flex items-center">
               <Target size={18} className="mr-2 text-gray-500" />
               Stock Management Recommendations
@@ -2174,7 +2608,6 @@ const InventoryDetailPage = () => {
               </h3>
 
               <ul className="space-y-3">
-                {/* Dynamic recommendations based on data */}
                 {product?.qty <= product?.min_stock && (
                   <li className="flex items-start text-sm">
                     <AlertCircle
@@ -2265,7 +2698,6 @@ const InventoryDetailPage = () => {
                   </li>
                 )}
 
-                {/* Seasonal recommendation if pattern exists */}
                 {seasonalPattern && seasonalPattern.length > 0 && (
                   <li className="flex items-start text-sm">
                     <CalendarIcon
@@ -2288,7 +2720,6 @@ const InventoryDetailPage = () => {
                   </li>
                 )}
 
-                {/* Fallback if no specific recommendations */}
                 {product?.qty > product?.min_stock &&
                   turnoverRate >= 3 &&
                   turnoverRate <= 8 &&
@@ -2296,7 +2727,7 @@ const InventoryDetailPage = () => {
                   trend >= -15 &&
                   trend <= 15 && (
                     <li className="flex items-start text-sm">
-                      <Check
+                      <CheckCircle
                         size={16}
                         className="text-green-500 mr-2 mt-0.5 flex-shrink-0"
                       />
@@ -2309,7 +2740,7 @@ const InventoryDetailPage = () => {
                   )}
               </ul>
             </div>
-          </div>
+          </div> */}
         </>
       )}
     </div>

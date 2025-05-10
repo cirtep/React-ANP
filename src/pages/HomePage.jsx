@@ -204,7 +204,7 @@ const HomePage = () => {
                 style={{ width: `${targetAchievement}%` }}
               />
             </div>
-            <div className="mt-2 text-sm text-gray-600">
+            {/* <div className="mt-2 text-sm text-gray-600">
               {targetAchievement >= 100
                 ? "🎉 Target achieved! Excellent performance."
                 : targetAchievement >= 80
@@ -212,7 +212,7 @@ const HomePage = () => {
                 : targetAchievement >= 50
                 ? "🔍 Progress is steady. Keep pushing to reach target."
                 : "⚠️ Target at risk. Increased focus required."}
-            </div>
+            </div> */}
           </div>
         </div>
       )}

@@ -370,8 +370,8 @@ const InventoryPage = () => {
             standard_price: editProductData.standard_price,
             retail_price: editProductData.retail_price,
             category: editProductData.category,
-            min_stock: editProductData.min_stock,
-            max_stock: editProductData.max_stock,
+            min_stock: editProductData.normal_min_stock,
+            max_stock: editProductData.normal_max_stock,
             supplier_id: editProductData.supplier_id,
             supplier_name: editProductData.supplier_name,
             location: editProductData.location,
@@ -1305,8 +1305,8 @@ const InventoryPage = () => {
                   </label>
                   <input
                     type="number"
-                    name="min_stock"
-                    value={editProductData.min_stock || ""}
+                    name="normal_min_stock"
+                    value={editProductData.normal_min_stock || ""}
                     onChange={handleNumberInputChange}
                     className="w-full p-2 border rounded-md"
                     min="0"
@@ -1320,8 +1320,8 @@ const InventoryPage = () => {
                   </label>
                   <input
                     type="number"
-                    name="max_stock"
-                    value={editProductData.max_stock || ""}
+                    name="normal_max_stock"
+                    value={editProductData.normal_max_stock || ""}
                     onChange={handleNumberInputChange}
                     className="w-full p-2 border rounded-md"
                     min="0"
