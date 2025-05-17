@@ -248,21 +248,21 @@ const SettingsOverlay = () => {
             {/* Grid layout for import forms */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <ImportForm
-                title="Transaction Data"
-                description="Import transaction history."
-                file={transactionFile}
-                setFile={setTransactionFile}
-                onImport={handleImportTransaction}
-                type="Transaction"
-              />
-
-              <ImportForm
                 title="Product Data"
                 description="Import product catalog."
                 file={productFile}
                 setFile={setProductFile}
                 onImport={handleImportProduct}
                 type="Product"
+              />
+
+              <ImportForm
+                title="Product Stock Data"
+                description="Import product stock."
+                file={productStockFile}
+                setFile={setProductStockFile}
+                onImport={handleImportProductStock}
+                type="ProductStock"
               />
 
               <ImportForm
@@ -275,12 +275,12 @@ const SettingsOverlay = () => {
               />
 
               <ImportForm
-                title="Product Stock Data"
-                description="Import product stock."
-                file={productStockFile}
-                setFile={setProductStockFile}
-                onImport={handleImportProductStock}
-                type="ProductStock"
+                title="Transaction Data"
+                description="Import transaction history."
+                file={transactionFile}
+                setFile={setTransactionFile}
+                onImport={handleImportTransaction}
+                type="Transaction"
               />
             </div>
           </>
@@ -668,20 +668,20 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
   };
 
   // Get status badge color
-  const getStatusBadgeClass = (status) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "running":
-        return "bg-blue-100 text-blue-800";
-      case "completed":
-        return "bg-green-100 text-green-800";
-      case "failed":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
+  // const getStatusBadgeClass = (status) => {
+  //   switch (status) {
+  //     case "pending":
+  //       return "bg-yellow-100 text-yellow-800";
+  //     case "running":
+  //       return "bg-blue-100 text-blue-800";
+  //     case "completed":
+  //       return "bg-green-100 text-green-800";
+  //     case "failed":
+  //       return "bg-red-100 text-red-800";
+  //     default:
+  //       return "bg-gray-100 text-gray-800";
+  //   }
+  // };
 
   return (
     <div>
@@ -1035,7 +1035,7 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
       </div>
 
       {/* Job History */}
-      <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-6">
+      {/* <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200 mb-6">
         <h3 className="font-semibold text-gray-800 mb-4 flex justify-between items-center">
           <span>Tuning Job History</span>
           <button
@@ -1123,7 +1123,7 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
             </table>
           </div>
         )}
-      </div>
+      </div> */}
 
       {/* Saved Parameter Configurations */}
       <div className="bg-white p-6 rounded-lg shadow-md border border-gray-200">
@@ -1152,7 +1152,7 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
                       {param.replace(/_/g, " ")}
                     </th>
                   ))}
-                  <th className="p-2 text-left">MAPE (%)</th>
+                  {/* <th className="p-2 text-left">MAPE (%)</th> */}
                   <th className="p-2 text-left">Created</th>
                   <th className="p-2 text-center">Actions</th>
                 </tr>
@@ -1170,10 +1170,8 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
                         {value}
                       </td>
                     ))}
-                    <td className="p-2">{param.mape.toFixed(2)}%</td>
-                    <td className="p-2">
-                      {new Date(param.created_at).toLocaleDateString()}
-                    </td>
+                    {/* <td className="p-2">{param.mape.toFixed(2)}%</td> */}
+                    <td className="p-2">{formatDate(param.created_at)}</td>
                     <td className="p-2 text-center">
                       <button
                         onClick={() => deleteParameter(param.id)}

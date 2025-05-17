@@ -499,8 +499,7 @@ const GoalsPage = () => {
       </div>
 
       {/* Top/Under Performers */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Top Performers */}
+      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h2 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
             <TrendingUp className="mr-2 text-green-500" size={20} />
@@ -559,7 +558,6 @@ const GoalsPage = () => {
           )}
         </div>
 
-        {/* Under Performers */}
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h2 className="text-lg font-medium text-gray-800 mb-4 flex items-center">
             <TrendingDown className="mr-2 text-red-500" size={20} />
@@ -607,7 +605,7 @@ const GoalsPage = () => {
             </div>
           )}
         </div>
-      </div>
+      </div> */}
 
       {/* Detailed Comparison Table */}
       <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">

@@ -32,6 +32,8 @@ const ForecastPage = () => {
   // const [loadingSaved, setLoadingSaved] = useState(false);
   // const [savedError, setSavedError] = useState(null);
 
+  const [mapeValue, setMapeValue] = useState(null);
+
   const [productQuery, setProductQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -48,6 +50,14 @@ const ForecastPage = () => {
 
   const searchRef = useRef(null);
   const baseUrl = import.meta.env.VITE_BASE_URL;
+
+  // const getMapeInfo = (mape) => {
+  //   if (mape === null) return { color: "gray", message: "Not available" };
+  //   if (mape < 10) return { color: "green", message: "Excellent" };
+  //   if (mape < 20) return { color: "blue", message: "Good" };
+  //   if (mape < 30) return { color: "yellow", message: "Fair" };
+  //   return { color: "red", message: "Poor" };
+  // };
 
   // Close search dropdown when clicking outside
   useEffect(() => {
@@ -156,6 +166,8 @@ const ForecastPage = () => {
         }
         const forecastResult = await forecastResponse.json();
 
+        setMapeValue(forecastResult.data.mape);
+
         // Fetch historical data - last 24 months
         const historicalResponse = await fetch(
           `${baseUrl}/api/inventory/product_history?product_id=${selectedProduct.product_id}&months=24`,
@@ -185,7 +197,7 @@ const ForecastPage = () => {
           type: "historical",
         }));
 
-        const formattedForecast = forecastResult.data.map((item) => ({
+        const formattedForecast = forecastResult.data.forecast.map((item) => ({
           ds: item.ds,
           date: new Date(item.ds).toLocaleDateString("en-US", {
             month: "short",
@@ -268,10 +280,43 @@ const ForecastPage = () => {
     if (!selectedProduct || !forecastData.length) return;
 
     try {
-      // Filter out historical data points
-      const forecastsToSave = forecastData.filter(
-        (item) => item.type !== "historical"
-      );
+      // Create a dictionary to ensure each date is only included once
+      const forecastMap = new Map();
+
+      // First add the historical data points
+      combinedData.forEach((item) => {
+        if (item.forecast !== undefined) {
+          const formattedDate = formatDateForAPI(item.date);
+          forecastMap.set(formattedDate, {
+            ds: formattedDate,
+            is_historical: item.date <= getCurrentMonthFormatted(),
+            yhat: item.forecast,
+            yhat_lower: item.lower,
+            yhat_upper: item.upper,
+          });
+        }
+      });
+
+      // Then add future data (will overwrite any duplicate historical dates)
+      forecastData.forEach((item) => {
+        if (item.type === "forecast" || item.is_historical === false) {
+          const dateKey = item.ds;
+          forecastMap.set(dateKey, {
+            ds: item.ds,
+            is_historical: false,
+            forecast: item.forecast,
+            lower: item.lower,
+            upper: item.upper,
+          });
+        }
+      });
+
+      // Convert map values to array
+      const combinedForecastData = Array.from(forecastMap.values());
+
+      // Debug info (can be removed later)
+      console.log("Saving forecast data:", combinedForecastData);
+      console.log("Total entries:", combinedForecastData.length);
 
       const response = await fetch(`${baseUrl}/api/forecast/save`, {
         method: "POST",
@@ -281,7 +326,8 @@ const ForecastPage = () => {
         },
         body: JSON.stringify({
           product_id: selectedProduct.product_id,
-          forecast_data: forecastsToSave,
+          forecast_data: combinedForecastData,
+          mape: mapeValue,
         }),
       });
 
@@ -302,164 +348,73 @@ const ForecastPage = () => {
     }
   };
 
-  const exportForecast = (exportType = "all") => {
-    if (!combinedData.length && !savedForecasts.length) return;
+  // Helper function to convert date format from "Feb 2025" to "2025-02-01"
+  const formatDateForAPI = (dateStr) => {
+    try {
+      const parts = dateStr.split(" ");
+      if (parts.length !== 2) return dateStr;
 
-    let exportData = [];
-    let headers = "";
-    let filename = "";
-
-    // Create different export formats based on the type
-    switch (exportType) {
-      case "current": // Export only current forecast data
-      {
-        exportData = [...combinedData];
-        headers = "Month,Actual,Forecast,Lower Bound,Upper Bound\n";
-        filename = `${
-          selectedProduct?.product_name || "product"
-        }_current_forecast`;
-
-        // Generate rows for current forecast
-        const currentRows = exportData
-          .map(
-            (item) =>
-              `${item.date},${item.actual || ""},${item.forecast || ""},${
-                item.lower || ""
-              },${item.upper || ""}`
-          )
-          .join("\n");
-
-        generateCSV(headers, currentRows, filename);
-        break;
-      }
-
-      case "saved": // Export only saved forecasts
-      {
-        if (!savedForecasts.length) return;
-
-        // Format saved forecasts
-        savedForecasts.forEach((sf) => {
-          const sfDate = new Date(sf.ds);
-          exportData.push({
-            date: sfDate.toLocaleDateString("en-US", {
-              month: "short",
-              year: "numeric",
-            }),
-            forecast: Math.round(sf.yhat),
-            lower: Math.round(sf.yhat_lower),
-            upper: Math.round(sf.yhat_upper),
-            savedAt: sf.saved_at,
-          });
-        });
-
-        // Sort by date
-        exportData.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        headers = "Month,Forecast,Lower Bound,Upper Bound,Saved On\n";
-        filename = `${
-          selectedProduct?.product_name || "product"
-        }_saved_forecasts`;
-
-        // Generate rows for saved forecasts
-        const savedRows = exportData
-          .map(
-            (item) =>
-              `${item.date},${item.forecast || ""},${item.lower || ""},${
-                item.upper || ""
-              },${item.savedAt || ""}`
-          )
-          .join("\n");
-
-        generateCSV(headers, savedRows, filename);
-        break;
-      }
-
-      case "all":
-      default: // Create a complete dataset that combines current and saved forecasts
-      {
-        exportData = [...combinedData];
-
-        // Add saved forecasts data
-        savedForecasts.forEach((savedForecast) => {
-          // Convert saved forecast date to the format used in combinedData
-          const sfDate = new Date(savedForecast.ds);
-          const formattedDate = sfDate.toLocaleDateString("en-US", {
-            month: "short",
-            year: "numeric",
-          });
-
-          // Check if this saved forecast already exists in the export data
-          const existingIndex = exportData.findIndex(
-            (item) => item.date === formattedDate
-          );
-
-          if (existingIndex >= 0) {
-            // Update existing entry with saved forecast data
-            exportData[existingIndex] = {
-              ...exportData[existingIndex],
-              savedForecast: Math.round(savedForecast.yhat),
-              savedLower: Math.round(savedForecast.yhat_lower),
-              savedUpper: Math.round(savedForecast.yhat_upper),
-              hasSavedForecast: true,
-              savedAt: savedForecast.saved_at,
-            };
-          } else {
-            // Add new entry for saved forecast
-            exportData.push({
-              date: formattedDate,
-              savedForecast: Math.round(savedForecast.yhat),
-              savedLower: Math.round(savedForecast.yhat_lower),
-              savedUpper: Math.round(savedForecast.yhat_upper),
-              hasSavedForecast: true,
-              savedAt: savedForecast.saved_at,
-            });
-          }
-        });
-
-        // Sort by date
-        exportData.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        headers =
-          "Month,Actual,Current Forecast,Current Lower Bound,Current Upper Bound,Saved Forecast,Saved Lower Bound,Saved Upper Bound,Saved On\n";
-        filename = `${
-          selectedProduct?.product_name || "product"
-        }_all_forecasts`;
-
-        // Generate rows for all data
-        const allRows = exportData
-          .map((item) => {
-            return `${item.date},${item.actual || ""},${item.forecast || ""},${
-              item.lower || ""
-            },${item.upper || ""},${
-              item.hasSavedForecast ? item.savedForecast : ""
-            },${item.hasSavedForecast ? item.savedLower : ""},${
-              item.hasSavedForecast ? item.savedUpper : ""
-            },${item.hasSavedForecast ? item.savedAt : ""}`;
-          })
-          .join("\n");
-
-        generateCSV(headers, allRows, filename);
-        break;
-      }
+      const month = new Date(Date.parse(`${parts[0]} 1, 2000`)).getMonth() + 1;
+      const year = parts[1];
+      return `${year}-${month.toString().padStart(2, "0")}-01`;
+    } catch (error) {
+      console.error("Error formatting date:", error);
+      return dateStr;
     }
   };
 
-  // Helper function to generate and download CSV
-  const generateCSV = (headers, rows, baseFilename) => {
-    const csvContent = "data:text/csv;charset=utf-8," + headers + rows;
-    const encodedUri = encodeURI(csvContent);
+  const exportForecast = (exportType = "all") => {
+    if (!combinedData.length && !savedForecasts.length) return;
 
-    // Create link and trigger download
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-
-    // Add date to filename
+    // Create URL with parameters
+    const baseUrl = import.meta.env.VITE_BASE_URL;
+    const token = localStorage.getItem("token");
     const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-    link.setAttribute("download", `${baseFilename}_${today}.csv`);
+    let url = `${baseUrl}/api/forecast/export?product_id=${selectedProduct.product_id}&type=${exportType}`;
 
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // For current forecast data, we need to pass it as a parameter
+    if (exportType === "all" || exportType === "current") {
+      // Stringify the combined data and encode it
+      const currentData = encodeURIComponent(JSON.stringify(combinedData));
+      url += `&current_data=${currentData}`;
+    }
+
+    // Use fetch API to download the file
+    fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.blob();
+      })
+      .then((blob) => {
+        // Create object URL for the blob
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+
+        // Set the file name
+        const fileName = `${
+          selectedProduct?.product_name || "product"
+        }_${exportType}_forecast_${today}.xlsx`;
+        a.download = fileName;
+
+        // Append to the document, click, and clean up
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      })
+      .catch((error) => {
+        console.error("Error downloading the Excel file:", error);
+        alert("Error downloading the Excel file. Please try again.");
+      });
   };
 
   // Get current month for the ReferenceLine in the chart
@@ -711,7 +666,7 @@ const ForecastPage = () => {
                 <XAxis
                   dataKey="date"
                   tick={{ fontSize: 11 }}
-                  interval={1}
+                  interval={0}
                   angle={-45}
                   textAnchor="end"
                   height={50}
@@ -777,6 +732,44 @@ const ForecastPage = () => {
               </LineChart>
             </ResponsiveContainer>
           </div>
+          {mapeValue !== null && (
+            <div className="mt-6 bg-white p-4 rounded-lg border border-gray-200">
+              <h3 className="font-medium text-gray-700 mb-2">
+                Forecast Accuracy
+              </h3>
+              <div className="flex items-center">
+                <div className="mr-4">
+                  <span className="text-gray-600 text-sm">
+                    MAPE (Mean Absolute Percentage Error):
+                  </span>
+                  <span className="ml-2 font-semibold">
+                    {mapeValue.toFixed(2)}%
+                  </span>
+                </div>
+
+                {/* <div
+                  className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    mapeValue < 10
+                      ? "bg-green-100 text-green-800"
+                      : mapeValue < 20
+                      ? "bg-blue-100 text-blue-800"
+                      : mapeValue < 30
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {getMapeInfo(mapeValue).message}
+                </div> */}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                <i>
+                  Lower values indicate better forecast accuracy. MAPE
+                  represents the average percentage difference between
+                  forecasted and actual values.
+                </i>
+              </p>
+            </div>
+          )}
           <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 flex items-center">
               <Calendar className="mr-3 text-blue-600" />
@@ -1053,14 +1046,14 @@ const ForecastPage = () => {
                         General Information
                       </h3>
                       <div className="space-y-3">
-                        <div>
+                        {/* <div>
                           <span className="text-sm text-gray-500">
                             Last Restocked
                           </span>
                           <p className="font-medium">
                             {productAnalysis.last_restocked || "N/A"}
                           </p>
-                        </div>
+                        </div> */}
                         <div>
                           <span className="text-sm text-gray-500">
                             Supplier
@@ -1255,7 +1248,7 @@ const ForecastPage = () => {
                             {selectedProduct?.unit || "units"}/month
                           </p>
                         </div>
-                        <div>
+                        {/* <div>
                           <span className="text-sm text-gray-500">
                             Seasonal Variability
                           </span>
@@ -1277,7 +1270,7 @@ const ForecastPage = () => {
                               ? " (Medium)"
                               : " (Low)"}
                           </p>
-                        </div>
+                        </div> */}
                         <div>
                           <span className="text-sm text-gray-500">
                             Stock Coverage
@@ -1286,7 +1279,7 @@ const ForecastPage = () => {
                             {productAnalysis.stock_coverage || 0} days
                           </p>
                         </div>
-                        <div>
+                        {/* <div>
                           <span className="text-sm text-gray-500">
                             Reorder Alert
                           </span>
@@ -1301,7 +1294,7 @@ const ForecastPage = () => {
                               ? "Yes - Reorder Recommended"
                               : "No - Stock Sufficient"}
                           </p>
-                        </div>
+                        </div> */}
                       </div>
                     </div>
                   </div>
