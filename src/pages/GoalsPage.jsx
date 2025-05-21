@@ -66,7 +66,35 @@ const GoalsPage = () => {
     const options = [];
     const now = new Date();
 
-    for (let i = 0; i < 12; i++) {
+    // Add options for the next 6 months (future)
+    for (let i = 0; i < 6; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() + i + 1, 1);
+      const monthValue = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+      options.push({
+        value: monthValue,
+        label: date.toLocaleString("default", {
+          month: "long",
+          year: "numeric",
+        }),
+      });
+    }
+
+    // Add current month
+    const currentMonthValue = `${now.getFullYear()}-${String(
+      now.getMonth() + 1
+    ).padStart(2, "0")}`;
+    options.push({
+      value: currentMonthValue,
+      label: now.toLocaleString("default", {
+        month: "long",
+        year: "numeric",
+      }),
+    });
+
+    // Add options for the last 12 months (past)
+    for (let i = 1; i <= 12; i++) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthValue = `${date.getFullYear()}-${String(
         date.getMonth() + 1
@@ -79,6 +107,23 @@ const GoalsPage = () => {
         }),
       });
     }
+
+    // Sort by date value (latest to earliest)
+    options.sort((a, b) => {
+      // Convert YYYY-MM to date objects for comparison
+      const dateA = new Date(
+        a.value.substring(0, 4),
+        parseInt(a.value.substring(5, 7)) - 1,
+        1
+      );
+      const dateB = new Date(
+        b.value.substring(0, 4),
+        parseInt(b.value.substring(5, 7)) - 1,
+        1
+      );
+      // Sort descending (latest first)
+      return dateB - dateA;
+    });
 
     return options;
   }, []);

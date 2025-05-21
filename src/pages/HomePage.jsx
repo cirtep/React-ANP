@@ -429,13 +429,13 @@ const HomePage = () => {
             <h2 className="text-lg font-medium text-gray-800">
               Recent Transactions
             </h2>
-            <button
+            {/* <button
               onClick={() => navigateTo("/customer")}
               className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
             >
               View All
               <ChevronRight size={16} className="ml-1" />
-            </button>
+            </button> */}
           </div>
           {recent_transactions && recent_transactions.length > 0 ? (
             <div className="overflow-x-auto">

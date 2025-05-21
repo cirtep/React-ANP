@@ -837,7 +837,7 @@ const InventoryDetailPage = () => {
             </div>
           </div>
 
-          {/* Sales Trend Chart - Updated version with trend line */}
+          {/* Sales Trend Chart */}
           <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
             <h2 className="text-lg font-semibold mb-4">Sales Trend</h2>
             <div className="h-64">

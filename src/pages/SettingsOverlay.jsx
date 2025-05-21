@@ -650,21 +650,7 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
   // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-
-    // Create a date object from the string
-    const date = new Date(dateString);
-
-    // Format the date in Makassar timezone (UTC+8)
-    return new Intl.DateTimeFormat("id-ID", {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-      timeZone: "Asia/Makassar", // UTC+8 timezone for Makassar
-    }).format(date);
+    return dateString; // Just return the already formatted date string from the backend
   };
 
   // Get status badge color
@@ -1142,40 +1128,63 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="p-2 text-left">Category</th>
-                  {/* Dynamic headers based on first parameter entry */}
-                  {Object.keys(savedParameters[0].parameters).map((param) => (
-                    <th key={param} className="p-2 text-left">
-                      {param.replace(/_/g, " ")}
-                    </th>
-                  ))}
-                  {/* <th className="p-2 text-left">MAPE (%)</th> */}
-                  <th className="p-2 text-left">Created</th>
-                  <th className="p-2 text-center">Actions</th>
+            <table className="min-w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="p-3 text-left font-medium text-gray-600 w-1/6">
+                    Category
+                  </th>
+                  {/* Defined parameter columns with set width and alignment */}
+                  <th className="p-3 text-center font-medium text-gray-600 w-1/6">
+                    Seasonality Mode
+                  </th>
+                  <th className="p-3 text-right font-medium text-gray-600 w-1/6">
+                    Changepoint Prior Scale
+                  </th>
+                  <th className="p-3 text-right font-medium text-gray-600 w-1/6">
+                    Seasonality Prior Scale
+                  </th>
+                  <th className="p-3 text-right font-medium text-gray-600 w-1/6">
+                    Holidays Prior Scale
+                  </th>
+                  <th className="p-3 text-right font-medium text-gray-600 w-1/6">
+                    Changepoint Range
+                  </th>
+                  <th className="p-3 text-left font-medium text-gray-600 w-1/6">
+                    Created
+                  </th>
+                  <th className="p-3 text-center font-medium text-gray-600 w-1/12">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-200">
                 {savedParameters.map((param) => (
-                  <tr
-                    key={param.id}
-                    className="hover:bg-gray-50 border-t border-gray-100"
-                  >
-                    <td className="p-2">{param.category}</td>
-                    {/* Dynamic cells based on parameters */}
-                    {Object.entries(param.parameters).map(([key, value]) => (
-                      <td key={key} className="p-2">
-                        {value}
-                      </td>
-                    ))}
-                    {/* <td className="p-2">{param.mape.toFixed(2)}%</td> */}
-                    <td className="p-2">{formatDate(param.created_at)}</td>
-                    <td className="p-2 text-center">
+                  <tr key={param.id} className="hover:bg-gray-50">
+                    <td className="p-3 text-gray-800">{param.category}</td>
+                    {/* Fixed parameter columns with appropriate rendering */}
+                    <td className="p-3 text-center text-gray-800">
+                      {param.parameters.seasonality_mode || "-"}
+                    </td>
+                    <td className="p-3 text-right text-gray-800">
+                      {param.parameters.changepoint_prior_scale || "-"}
+                    </td>
+                    <td className="p-3 text-right text-gray-800">
+                      {param.parameters.seasonality_prior_scale || "-"}
+                    </td>
+                    <td className="p-3 text-right text-gray-800">
+                      {param.parameters.holidays_prior_scale || "-"}
+                    </td>
+                    <td className="p-3 text-right text-gray-800">
+                      {param.parameters.changepoint_range || "-"}
+                    </td>
+                    <td className="p-3 text-gray-800">
+                      {formatDate(param.created_at)}
+                    </td>
+                    <td className="p-3 text-center">
                       <button
                         onClick={() => deleteParameter(param.id)}
-                        className="text-red-500 hover:text-red-700"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50 py-1 px-2 rounded-md transition-colors"
                         title="Delete Parameter"
                       >
                         Delete
