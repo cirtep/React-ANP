@@ -1,12 +1,89 @@
-# React + Vite
+# React-ANP
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend web application built with **React.js + Tailwind CSS** for CV. Aneka Niaga Pratama (ANP). This dashboard supports sales forecasting and customer analytics to help decision-making processes across sales, product, and customer relationship domains.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Features
 
-## Expanding the ESLint configuration
+- 🔐 JWT-based authentication & protected routes
+- 📈 Sales Forecasting UI integration (Prophet backend ready)
+- 👤 Customer segmentation & loyalty visualization
+- 📊 Interactive dashboards (monthly/quarterly trends, spider charts)
+- 📥 Master data import (.csv, .xls, .xlsx) with full-screen overlay
+- 🌐 Responsive layout (mobile-friendly)
 
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 📁 Project Structure
+
+```
+src/
+├── components/       # Reusable UI components
+├── context/          # AuthContext & hooks
+├── pages/            # Main route views (Dashboard, CustomerDetail, Settings)
+├── layouts/          # Dashboard layout for desktop & mobile
+├── services/         # API integrations
+├── utils/            # Formatter and helper functions
+└── App.jsx           # Route definitions and layout binding
+```
+
+---
+
+## ⚙️ Tech Stack
+
+- **React** (Vite)
+- **Tailwind CSS**
+- **React Router v6**
+- **Recharts** (data visualization)
+- **Flask REST API** (external backend)
+- **JWT (JSON Web Token)** for auth
+
+---
+
+## 🛠️ Setup & Run
+
+```bash
+# Clone the repo
+git clone https://github.com/your-username/React-ANP.git
+cd React-ANP
+
+# Install dependencies
+yarn install
+
+# Setup environment variable
+cp .env.example .env
+# Edit VITE_BASE_URL in .env to match your Flask API
+
+# Run development server
+yarn  dev
+```
+
+---
+
+## 📦 Build for Production
+
+```bash
+yarn build
+```
+
+---
+
+## 📌 Notes
+
+- This project communicates with a backend API (Flask + Prophet) hosted separately.
+- Make sure you have a valid token from the `/login` endpoint to access protected routes.
+- Customer import only available for `customer` master at `/api/import/customers` for now.
+
+---
+
+## 👨‍💻 Author
+
+Developed with ❤️ by [Your Name]  
+For CV. Aneka Niaga Pratama, Makassar, Indonesia.
+
+---
+
+## 📝 License
+
+This project is licensed under the [MIT License](LICENSE).
