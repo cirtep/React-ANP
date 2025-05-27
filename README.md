@@ -9,7 +9,7 @@ Frontend web application built with **React.js + Tailwind CSS** for CV. Aneka Ni
 - 🔐 JWT-based authentication & protected routes
 - 📈 Sales Forecasting UI integration (Prophet backend ready)
 - 👤 Customer segmentation & loyalty visualization
-- 📊 Interactive dashboards (monthly/quarterly trends, spider charts)
+- 📊 Interactive dashboards (monthly/quarterly trends, charts)
 - 📥 Master data import (.csv, .xls, .xlsx) with full-screen overlay
 - 🌐 Responsive layout (mobile-friendly)
 
