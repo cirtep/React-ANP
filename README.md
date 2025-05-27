@@ -79,7 +79,7 @@ yarn build
 
 ## 👨‍💻 Author
 
-Developed with ❤️ by [Kei]  
+Developed with ❤️ by Kei
 For CV. Aneka Niaga Pratama, Makassar, Indonesia.
 
 ---
