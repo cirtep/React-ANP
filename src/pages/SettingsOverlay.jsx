@@ -635,16 +635,16 @@ const ForecastParameterTab = ({ showMessage, baseUrl }) => {
 
   // Parameter description mapping
   const parameterDescriptions = {
-    // changepoint_prior_scale:
-    //   "Controls flexibility in the trend (how much it can change). Lower values create smoother trends.",
-    // seasonality_prior_scale:
-    //   "Controls flexibility of the seasonality. Higher values allow more fluctuation in seasonal patterns.",
-    // holidays_prior_scale:
-    //   "Controls flexibility of holiday effects. Higher values make holidays more pronounced.",
-    // seasonality_mode:
-    //   "Additive for constant seasonality patterns; multiplicative when seasonality changes with trend level.",
-    // changepoint_range:
-    //   "Proportion of the history where trend changes can occur. Value of 0.9 means changepoints only in first 90% of the data.",
+    changepoint_prior_scale:
+      "Controls flexibility in the trend (how much it can change). Lower values create smoother trends.",
+    seasonality_prior_scale:
+      "Controls how strongly the model adheres to seasonal patterns. Larger values allow for more flexible seasonality.",
+    holidays_prior_scale:
+      "Adjusts how much the model allows the holidays to affect the forecast. Higher values increase the impact of holidays.",
+    seasonality_mode:
+      "Additive for constant seasonality patterns; multiplicative when seasonality changes with trend level.",
+    changepoint_range:
+      "Proportion of the history where trend changes can occur. Value of 0.9 means changepoints only in first 90% of the data. Lower values focus changepoints toward the beginning.",
   };
 
   // Format date for display
