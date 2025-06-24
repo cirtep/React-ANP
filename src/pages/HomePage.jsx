@@ -164,47 +164,47 @@ const HomePage = () => {
       </div>
 
       {/* Target Progress Card */}
-      {sales?.target && (
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <p className="text-sm text-gray-500 font-medium">
-                Monthly Sales Target
-              </p>
-              <p className="text-2xl font-bold text-gray-800 mt-1">
-                {formatCurrency(sales.target)}
-              </p>
-            </div>
-            <div className="p-3 bg-purple-50 rounded-md">
-              <Target className="h-6 w-6 text-purple-500" />
-            </div>
+      {/* {sales?.target && ( */}
+      <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <p className="text-sm text-gray-500 font-medium">
+              Monthly Sales Target
+            </p>
+            <p className="text-2xl font-bold text-gray-800 mt-1">
+              {formatCurrency(sales.target)}
+            </p>
           </div>
+          <div className="p-3 bg-purple-50 rounded-md">
+            <Target className="h-6 w-6 text-purple-500" />
+          </div>
+        </div>
 
-          <div className="mt-2">
-            <div className="flex justify-between items-center mb-1">
-              <span className="text-sm text-gray-600">
-                Progress: {targetAchievement.toFixed(1)}%
-              </span>
-              <span className="text-sm font-medium">
-                {formatCurrency(sales.current_month)} of{" "}
-                {formatCurrency(sales.target)}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div
-                className={`h-2.5 rounded-full ${
-                  targetAchievement >= 90
-                    ? "bg-green-500"
-                    : targetAchievement >= 60
-                    ? "bg-blue-500"
-                    : targetAchievement >= 30
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
-                }`}
-                style={{ width: `${targetAchievement}%` }}
-              />
-            </div>
-            {/* <div className="mt-2 text-sm text-gray-600">
+        <div className="mt-2">
+          <div className="flex justify-between items-center mb-1">
+            <span className="text-sm text-gray-600">
+              Progress: {targetAchievement.toFixed(1)}%
+            </span>
+            <span className="text-sm font-medium">
+              {formatCurrency(sales.current_month)} of{" "}
+              {formatCurrency(sales.target)}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2.5">
+            <div
+              className={`h-2.5 rounded-full ${
+                targetAchievement >= 90
+                  ? "bg-green-500"
+                  : targetAchievement >= 60
+                  ? "bg-blue-500"
+                  : targetAchievement >= 30
+                  ? "bg-yellow-500"
+                  : "bg-red-500"
+              }`}
+              style={{ width: `${targetAchievement}%` }}
+            />
+          </div>
+          {/* <div className="mt-2 text-sm text-gray-600">
               {targetAchievement >= 100
                 ? "🎉 Target achieved! Excellent performance."
                 : targetAchievement >= 80
@@ -213,9 +213,9 @@ const HomePage = () => {
                 ? "🔍 Progress is steady. Keep pushing to reach target."
                 : "⚠️ Target at risk. Increased focus required."}
             </div> */}
-          </div>
         </div>
-      )}
+      </div>
+      {/* )} */}
 
       {/* Sales Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
