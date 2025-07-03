@@ -4,8 +4,6 @@ import {
   User,
   Building,
   MapPin,
-  Phone,
-  Mail,
   Calendar,
   ShoppingCart,
   TrendingUp,
@@ -13,33 +11,19 @@ import {
   Activity,
   ChevronLeft,
   Edit2,
-  Share2,
-  Download,
-  Clipboard,
   FileText,
   AlertCircle,
   Clock,
   RefreshCw,
-  Users,
   Package,
-  Tag,
   CreditCard,
-  Truck,
   PieChart as PieChartIcon,
-  BarChart2,
-  TrendingDown,
   Calendar as CalendarIcon,
-  CheckCircle,
-  Percent,
   Award,
-  Repeat,
-  Archive,
-  Filter,
   ShoppingBag,
   Bookmark,
-  Heart,
-  Zap,
-  Target,
+  ChevronRight,
+  Info,
 } from "lucide-react";
 import {
   LineChart,
@@ -58,11 +42,6 @@ import {
   AreaChart,
   Area,
   ReferenceLine,
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
 } from "recharts";
 
 const CustomerDetailPage = () => {
@@ -75,9 +54,92 @@ const CustomerDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Time range and date states
+  const [timeRange, setTimeRange] = useState("all"); // "3m", "6m", "12m", "all", "custom"
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [displayDateRange, setDisplayDateRange] = useState(""); // For showing actual date range
+
   // UI states
-  const [timeRange, setTimeRange] = useState("all"); // Default: all (changed from fixed 6 months)
   const [activeTab, setActiveTab] = useState("overview"); // "overview", "analysis", "products", "profile"
+
+  // Helper function to calculate date ranges
+  const getDateRange = (range) => {
+    const today = new Date();
+    let start = new Date(today);
+    let end = new Date(today);
+
+    switch (range) {
+      case "3m":
+        start.setMonth(start.getMonth() - 3);
+        break;
+      case "6m":
+        start.setMonth(start.getMonth() - 6);
+        break;
+      case "12m":
+        start.setFullYear(start.getFullYear() - 1);
+        break;
+      case "all":
+        return { startDate: "", endDate: "" };
+      default:
+        return { startDate: "", endDate: "" };
+    }
+
+    return {
+      startDate: start.toISOString().split("T")[0],
+      endDate: end.toISOString().split("T")[0],
+    };
+  };
+
+  // Format date for display
+  const formatDisplayDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Update display date range
+  const updateDisplayDateRange = (start, end) => {
+    if (!start && !end) {
+      setDisplayDateRange("All Time");
+    } else {
+      const startDisplay = start ? formatDisplayDate(start) : "Beginning";
+      const endDisplay = end ? formatDisplayDate(end) : "Today";
+      setDisplayDateRange(`${startDisplay} - ${endDisplay}`);
+    }
+  };
+
+  // Handle time range change
+  const handleTimeRangeChange = (range) => {
+    setTimeRange(range);
+    if (range !== "custom") {
+      const { startDate: start, endDate: end } = getDateRange(range);
+      setStartDate(start);
+      setEndDate(end);
+      updateDisplayDateRange(start, end);
+    }
+  };
+
+  // Handle custom date change
+  const handleDateChange = (type, value) => {
+    if (type === "start") {
+      setStartDate(value);
+      updateDisplayDateRange(value, endDate);
+    } else {
+      setEndDate(value);
+      updateDisplayDateRange(startDate, value);
+    }
+    setTimeRange("custom");
+  };
+
+  // Initialize display date range
+  useEffect(() => {
+    updateDisplayDateRange(startDate, endDate);
+  }, []);
 
   // Fetch customer details and sales data
   useEffect(() => {
@@ -103,28 +165,33 @@ const CustomerDetailPage = () => {
 
         const customerData = await customerResponse.json();
 
-        // Determine months value for API call
-        // Convert "all" to a large number for API
-        const monthsValue = timeRange === "all" ? 9999 : parseInt(timeRange);
+        // Build query params for sales data
+        let salesUrl = `${
+          import.meta.env.VITE_BASE_URL
+        }/api/customer/${customerId}/sales`;
+        const params = new URLSearchParams();
+
+        if (startDate) params.append("start_date", startDate);
+        if (endDate) params.append("end_date", endDate);
+
+        if (params.toString()) {
+          salesUrl += `?${params.toString()}`;
+        }
 
         // Fetch sales data
-        const salesResponse = await fetch(
-          `${
-            import.meta.env.VITE_BASE_URL
-          }/api/customer/${customerId}/sales?months=${monthsValue}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
+        const salesResponse = await fetch(salesUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
 
         if (!salesResponse.ok) {
           throw new Error("Failed to fetch sales data");
         }
 
         const salesData = await salesResponse.json();
+
         setCustomer(customerData.data);
         setSalesData(salesData.data);
         setLoading(false);
@@ -135,7 +202,7 @@ const CustomerDetailPage = () => {
     };
 
     fetchCustomerData();
-  }, [customerId, timeRange]);
+  }, [customerId, startDate, endDate]);
 
   // Handle back navigation
   const goBack = () => {
@@ -585,7 +652,177 @@ const CustomerDetailPage = () => {
       >
         <ChevronLeft size={16} className="mr-1" /> Back to Customers
       </button>
+      {/* Enhanced Time Range and Date Filter */}
+      <div className="mb-6 rounded-xl shadow-sm">
+        <div className="bg-white rounded-lg p-4">
+          {/* Header with current range display */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <CalendarIcon size={20} className="text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Date Period
+                </h3>
+                <p className="text-xs text-gray-500">
+                  Filter data by time range
+                </p>
+              </div>
+            </div>
 
+            {/* Current Range Display */}
+            <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg">
+              <Clock size={16} className="text-blue-600" />
+              <span className="text-sm font-medium text-gray-700">
+                Showing:
+              </span>
+              <span className="text-sm font-bold text-blue-700">
+                {displayDateRange}
+              </span>
+            </div>
+          </div>
+
+          {/* Controls Section */}
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            {/* Quick Time Range Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-gray-600 mr-2">
+                Quick Select:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => handleTimeRangeChange("3m")}
+                  className={`group relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    timeRange === "3m"
+                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md transform scale-105"
+                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <span className="relative z-10">3 Months</span>
+                  {timeRange === "3m" && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleTimeRangeChange("6m")}
+                  className={`group relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    timeRange === "6m"
+                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md transform scale-105"
+                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <span className="relative z-10">6 Months</span>
+                  {timeRange === "6m" && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleTimeRangeChange("12m")}
+                  className={`group relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    timeRange === "12m"
+                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md transform scale-105"
+                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <span className="relative z-10">1 Year</span>
+                  {timeRange === "12m" && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => handleTimeRangeChange("all")}
+                  className={`group relative px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                    timeRange === "all"
+                      ? "bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-md transform scale-105"
+                      : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <span className="relative z-10">All Time</span>
+                  {timeRange === "all" && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden lg:block w-px h-8 bg-gray-300"></div>
+            <div className="lg:hidden h-px w-full bg-gray-200"></div>
+
+            {/* Custom Date Range Picker */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <span className="text-sm font-medium text-gray-600">
+                Custom Range:
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => handleDateChange("start", e.target.value)}
+                    className={`pl-8 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-all duration-200 ${
+                      timeRange === "custom"
+                        ? "border-blue-500 ring-2 ring-blue-200 bg-blue-50"
+                        : "border-gray-300 hover:border-gray-400 focus:ring-blue-500"
+                    }`}
+                    placeholder="Start Date"
+                  />
+                  <Calendar
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400"
+                    size={16}
+                  />
+                </div>
+
+                <div className="flex items-center gap-1 text-gray-400">
+                  <div className="w-4 h-px bg-gray-400"></div>
+                  <ChevronRight size={16} />
+                  <div className="w-4 h-px bg-gray-400"></div>
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => handleDateChange("end", e.target.value)}
+                    className={`pl-8 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-all duration-200 ${
+                      timeRange === "custom"
+                        ? "border-blue-500 ring-2 ring-blue-200 bg-blue-50"
+                        : "border-gray-300 hover:border-gray-400 focus:ring-blue-500"
+                    }`}
+                    placeholder="End Date"
+                  />
+                  <Calendar
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400"
+                    size={16}
+                  />
+                </div>
+
+                {timeRange === "custom" && (
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    Custom
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Info Text */}
+          {salesData && (
+            <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">
+              <Info size={14} />
+              <span>
+                {salesData.total_orders} orders found • Total{" "}
+                {formatCurrency(salesData.total_sales)} •
+                {salesData.all_products?.length || 0} products purchased
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
@@ -641,25 +878,6 @@ const CustomerDetailPage = () => {
             Customer Profile
           </button>
         </nav>
-      </div>
-
-      {/* Time Range Selector */}
-      <div className="flex justify-end mb-4">
-        <div className="bg-gray-100 rounded-md inline-flex p-1">
-          {["3", "6", "12", "all"].map((months) => (
-            <button
-              key={months}
-              className={`px-3 py-1 text-sm rounded-md ${
-                timeRange === months
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-gray-600 hover:bg-gray-200"
-              }`}
-              onClick={() => setTimeRange(months)}
-            >
-              {months === "all" ? "All Time" : `${months} Months`}
-            </button>
-          ))}
-        </div>
       </div>
 
       {/* OVERVIEW TAB */}
